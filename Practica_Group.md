@@ -110,7 +110,51 @@ py-scheduler/
     - **Observe**: *list unscheduled Pods:*    
     - **Decide**: *pick a Node*       
     - **Act**: *bind the Pod*
+
+Para implementar el scheduler basado en *polling*, se ha seguido el patrón clásico de los controladores de Kubernetes: **Observar → Decidir → Actuar**. El código proporcionado ([variants/polling/scheduler.py](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/variants/polling/scheduler.py)
+) implementa este ciclo mediante consultas periódicas al API Server. A continuación describimos cada fase y su relación directa con el código del scheduler.
+
+---
+
+✅ **1. Observar: listar los Pods no programados**
+
+En el bucle principal, el scheduler consulta periódicamente al API Server para obtener los Pods que cumplen:
+
+- **no tienen nodo asignado**, es decir, están en estado `Pending` (`spec.nodeName=`), y  
+- **solicitan explícitamente el scheduler personalizado** (`spec.schedulerName == args.scheduler_name`) (Debe ser `my_scheduler`).
+
+```python
+pods = api.list_pod_for_all_namespaces(
+    field_selector="spec.nodeName="
+).items
+
+for pod in pods:
+    if pod.spec.scheduler_name != args.scheduler_name:
+        continue
+```
+  Así, sólo cogemos los Pods pendientes de asignación, es decir, que aún no tienen un nodo asignado (spec.nodeName vacío), lo que normalmente corresponde a Pods en estado Pending.
+  
+ ✅ 2. Decidir: seleccionar un nodo
+La lógica de decisión está en:
+ ```python
+node = choose_node(api, pod)
+ ```
+La función `choose_node()` realiza lo siguiente:
+        a. Obtiene la lista completa de nodos: `nodes = api.list_node().items`
+        b. Cuenta cuántos Pods están ya asignados a cada nodo: `cnt = sum(1 for p in pods if p.spec.node_name == n.metadata.name)`
+        c. Selecciona el nodo con menos Pods, aplicando así una estrategia sencilla de “menor carga”: `if cnt < min_cnt:`
  
+   ✅ 3. Actuar: realizar el binding del Podç
+    ```python
+   bind_pod(api, pod, node_name)
+    ```
+El binding consiste en:
+    a) crear una referencia al nodo: `target = client.V1ObjectReference(kind="Node", name=node_name)`
+    b) crear la estructura V1Binding: `body = client.V1Binding(target=target, metadata=client.V1ObjectMeta(name=pod.metadata.name))`
+    c) enviarla al API Server para completar la asignación: `api.create_namespaced_binding(pod.metadata.namespace, body)`
+
+Este paso actualiza el campo .spec.nodeName del Pod.  Y a partir de aquí, el kubelet del nodo asignado detecta la nueva asignación y comienza la creación del contenedor correspondiente.
+    
 ## 🐳🔐🧪 Step 4 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
 
 

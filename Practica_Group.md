@@ -17,11 +17,7 @@
  We set up the environment using the required installation prerequisites. We then followed the steps described in 
  section `A` of the `README.md`.
 
-<p align="center">
-<img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura1.png" width="850">
-  <br>
-  <em>Figure 1: Creation of the <code>sched-lab</code> cluster.</em>
-</p>
+
 
 
  In the environment we prepared, we executed the first step:
@@ -42,12 +38,12 @@ kubectl get pods -o wide
 ### ✅**Checkpoint 1:**
 Describe the path:
     kubectl run → Pod created → Scheduler assigns Node → kubelet starts Pod.
+ 
 <p align="center">
-  <img width="1912" height="512" alt="image" src="https://github.com/user-attachments/assets/0062f874-d914-4966-b67b-9cd6f51d63e5" />
+<img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura1-1.png" width="850">
   <br>
   <em>Figure 2: Verification of the default scheduler and scheduling of a test Pod.</em>
 </p>
-
 
 ✅ **Descripción del flujo de scheduling en Kubernetes**
 

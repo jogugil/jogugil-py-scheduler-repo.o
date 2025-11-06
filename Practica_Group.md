@@ -190,39 +190,45 @@ before scoring.
 
 - ***Why is it important that your scheduler writes a Binding object instead of patching a Pod directly?***
   
-      Porque el uso de un `Binding` es el mecanismo definido por Kubernetes para asignar un Pod a un nodo. En un      principio, este mecanismo permite una escalabilidad y fiabilidad del cluster ya que comprueba si los nodos tienen permisoso para ejecutar dicho Pod, y si la carga de dicho nodo permite ejecutarlo. Lo que permite mantener una escalabilidad de la carga y una seguridad en la ejecución de los contenedores. Esta asinación ser elaiza de forma tómica y segura, es decir, o se asigna o no se asigna, evitando condiciones de carrera. 
-      Además, todo se realiza a traves del APISErver, lo que  garantiza que el flujo de control sea el correcto dentro del sistema. Lo que permite también mantener un sistema auditable, útil para depuración y trazabilidad.
+> ### Importancia de usar un `Binding` en lugar de modificar directamente un Pod
+>
+> Porque el uso de un `Binding` es el mecanismo definido por Kubernetes para asignar un Pod a un nodo.  
+> En un principio, este mecanismo permite escalabilidad y fiabilidad del clúster, ya que comprueba si los nodos tienen permisos para ejecutar dicho Pod y si la carga del nodo permite ejecutarlo. Esto permite mantener un balance de carga y garantizar la seguridad en la ejecución de los contenedores.  
+> La asignación se realiza de forma **atómica y segura**, es decir, o se asigna o no se asigna, evitando condiciones de carrera.  
+> 
+> Además, todo se realiza a través del **API Server**, lo que garantiza que el flujo de control sea el correcto dentro del sistema. Esto permite también mantener un sistema **auditable**, útil para depuración y trazabilidad.
 
 - ***What are the trade-offs between polling vs event-driven models?***
 
-       Ventajas:
-            - Muy fácil de implementar.  
-            - No necesita controladores sofisticados.  
-            - Tolera fallos temporales de conexión.  
-        
-       Desventajas:
-            - Introduce **latencia**: un Pod puede tardar en ser detectado.  
-            - Genera **carga innecesaria** en el API Server por las consultas repetidas.  
-            - No escala bien en clústeres grandes.
+> ### Ventajas y desventajas del modelo de polling
+>
+> **Ventajas:**
+> - Muy fácil de implementar.  
+> - No necesita controladores sofisticados.  
+> - Tolera fallos temporales de conexión.
+>
+> **Desventajas:**
+> - Introduce **latencia**: un Pod puede tardar en ser detectado.  
+> - Genera **carga innecesaria** en el API Server por las consultas repetidas.  
+> - No escala bien en clústeres grandes.
  
 - ***How do taints and tolerations interact with your scheduling logic?***
 
-  - Un **taint** en un nodo sirve para “repeler” Pods que no lo toleren.  
-  - Una **toleration** en un Pod indica que puede ejecutarse en un nodo con ese taint.
-  
-  Para un scheduler personalizado:
-  - a) Debemos **filtrar nodos cuyo taint no pueda ser tolerado** por el Pod.  
-  - b) Si ignoramos esto, podríamos bindear un Pod a un nodo donde **nunca podrá ejecutarse**, quedando permanentemente en `Pending`.  
-  
-  **Ejemplo:** un Pod sin tolerations **no debe** ser programado en un nodo marcado con `NoSchedule`.
-
-  Por tanto, un scheduler completo debe:  
-  - Leer taints del nodo.  
-  - Leer tolerations del Pod.  
-  - Excluir nodos incompatibles antes de tomar una decisión.
-
----
-
+> - Un **taint** en un nodo sirve para “repeler” Pods que no lo toleren.  
+> - Una **toleration** en un Pod indica que puede ejecutarse en un nodo con ese taint.
+>
+> Para un scheduler personalizado:
+> - a) Debemos **filtrar nodos cuyo taint no pueda ser tolerado** por el Pod.  
+> - b) Si ignoramos esto, podríamos bindear un Pod a un nodo donde **nunca podrá ejecutarse**, quedando permanentemente en `Pending`.  
+>
+> **Ejemplo:**  
+> Un Pod sin tolerations **no debe** ser programado en un nodo con el taint `NoSchedule`.
+>
+> Por tanto, un scheduler completo debe:
+> - Leer los taints del nodo.  
+> - Leer las tolerations del Pod.  
+> - Excluir nodos incompatibles antes de tomar una decisión.
+ 
 - ***What are real-world policies you could implement using this framework?***
 
 > El framework permite implementar políticas reales como:

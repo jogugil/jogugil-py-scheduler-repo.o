@@ -18,7 +18,7 @@
  section `A` of the `README.md`.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/33d2b1ac-d3f7-4415-8482-be88ebfa8d7f" width="450">
+  <img src="https://github.com/user-attachments/assets/2f152f94-8285-4643-9de7-8e0c28b2bbaa" width="450">
   <br>
   <em>Figure 1: Creation of the <code>sched-lab</code> cluster.</em>
 </p>

@@ -18,6 +18,7 @@
  section `A` of the `README.md`.
 
 <img width="741" height="510" alt="image" src="https://github.com/user-attachments/assets/33d2b1ac-d3f7-4415-8482-be88ebfa8d7f" />
+*Figure 1: Creation of the `sched-lab` cluster.*
 
  In the environment we prepared, we executed the first step:
  

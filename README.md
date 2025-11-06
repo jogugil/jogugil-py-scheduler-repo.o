@@ -74,7 +74,7 @@ git commit -m "solution: watch-based scheduler (Python)"
 git checkout main
 
 echo "Branches created for group repository: main (polling), student (watch skeleton), solution (watch solution)"
-
+```
 ## Quickstart
 
 ```bash

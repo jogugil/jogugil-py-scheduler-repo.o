@@ -42,12 +42,12 @@ Describe the path:
 <p align="center">
 <img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura1-1.png" width="850">
   <br>
-  <em>Figure 2: Verification of the default scheduler and scheduling of a test Pod.</em>
+  <em>Figure 1: Verification of the default scheduler and scheduling of a test Pod.</em>
 </p>
 
 ✅ **Descripción del flujo de scheduling en Kubernetes**
 
-La **Figura 2** muestra la ejecución de los comandos utilizados para verificar que el scheduler por defecto está en funcionamiento y para observar cómo se programa un Pod sencillo dentro del clúster creado con Kind. A partir de los resultados obtenidos, podemos describir el funcionamiento interno del sistema cuando programamos un Pod:
+La **Figura 1** muestra la ejecución de los comandos utilizados para verificar que el scheduler por defecto está en funcionamiento y para observar cómo se programa un Pod sencillo dentro del clúster creado con Kind. A partir de los resultados obtenidos, podemos describir el funcionamiento interno del sistema cuando programamos un Pod:
 
 **a) Enviamos la orden de creación del Pod**  
 Ejecutamos `kubectl run test --image=nginx --restart=Never`, lo que provoca que el cliente `kubectl` envíe al API Server un objeto Pod para ser creado. En este momento, el Pod se registra pero aún no tiene un nodo asignado.
@@ -56,7 +56,7 @@ Ejecutamos `kubectl run test --image=nginx --restart=Never`, lo que provoca que 
 Tras su creación, el API Server almacena el Pod con `status=Pending`, ya que todavía no ha sido asociado a ningún nodo del clúster.
 
 **c) El scheduler detecta el nuevo Pod sin asignar**  
-El `kube-scheduler`, que aparece ejecutándose como se muestra en la Figura 2, observa periódicamente los Pods pendientes mediante sus mecanismos internos de *informers*.  
+El `kube-scheduler`, que aparece ejecutándose como se muestra en la Figura 1, observa periódicamente los Pods pendientes mediante sus mecanismos internos de *informers*.  
 Detecta que el Pod recién creado no tiene un nodo asociado (`.spec.nodeName` vacío).
 
 **d) El scheduler selecciona un nodo adecuado**  
@@ -95,6 +95,14 @@ py-scheduler/
 ├── test-pod.yaml
 └── requirements.txt
  ```
+
+<p align="center">
+<img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura2.png" width="850">
+  <br>
+  <em>Figure 2: We create the local directory containing the files required to deploy the polling scheduler.</em>
+
+</p>
+
 ## 🧠 Step 3 — Implement the Polling Scheduler
 ### ✅**Checkpoint 2:**
 

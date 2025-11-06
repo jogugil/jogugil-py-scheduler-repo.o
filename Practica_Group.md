@@ -97,7 +97,7 @@ py-scheduler/
  ```
 
 <p align="center">
-<img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura2.png" width="850">
+<img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/Figura2.png" width="850">
   <br>
   <em>Figure 2: We create the local directory containing the files required to deploy the polling scheduler.</em>
 

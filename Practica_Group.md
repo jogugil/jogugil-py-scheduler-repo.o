@@ -17,10 +17,12 @@
  We set up the environment using the required installation prerequisites. We then followed the steps described in 
  section `A` of the `README.md`.
 
-<figure style="text-align:center;">
+<p align="center">
   <img src="https://github.com/user-attachments/assets/33d2b1ac-d3f7-4415-8482-be88ebfa8d7f" width="450">
-  <figcaption><em>Figure 1: Creation of the <code>sched-lab</code> cluster.</em></figcaption>
-</figure>
+  <br>
+  <em>Figure 1: Creation of the <code>sched-lab</code> cluster.</em>
+</p>
+
 
  In the environment we prepared, we executed the first step:
  

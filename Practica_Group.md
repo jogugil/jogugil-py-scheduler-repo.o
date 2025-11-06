@@ -225,27 +225,28 @@ before scoring.
 
 - ***What are real-world policies you could implement using this framework?***
 
-  El framework permite implementar políticas reales como:
+> El framework permite implementar políticas reales como:
+>
+> - a) ***[Nodo menos cargado](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)*** (la que usamos).
+>
+> - b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos.
+>
+> - c) ***[Affinity y Anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)***  
+>     - Separar cargas sensibles.  
+>     - Agrupar Pods que trabajan juntos.
+>
+> - d) ***Ahorro energético***  
+>     - Consolidar cargas para apagar nodos poco usados.  
+>     - Elegir nodos más eficientes.
+>
+> - e) ***Topología y rendimiento***  
+>     - Elegir nodos según región, zona, latencia, GPU…  
+>     - [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)  
+>     - [Node Labels](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#built-in-node-labels)  
+>     - [Topology Manager / NUMA](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-manager/)
+>
+> - f) ***Prioridades y SLAs***  
+>     - Colocar Pods prioritarios en nodos específicos.  
+>     - [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)  
+>     - [QoS Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
 
-  - a) ***[Nodo menos cargado](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)*** (la que usamos).
-  
-  - b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos.
-
-  - c) ***[Affinity y Anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)***:  
-      - Separar cargas sensibles.  
-      - Agrupar Pods que trabajan juntos.
-
-  - d) ***Ahorro energético***:  
-      - Consolidar cargas para apagar nodos poco usados.  
-      - Elegir nodos más eficientes o con menor consumo energético.
-
-  - e) ***Topología y rendimiento***:  
-      - Elegir nodos según región, zona, latencia, GPU, NVMe, etc.  
-        - [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)  
-        - [Node Labels](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#built-in-node-labels)  
-        - [Topology Manager / NUMA](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-manager/)
-
-  - f) ***Prioridades y SLAs***:  
-      - Colocar Pods prioritarios en nodos específicos.  
-        - [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)  
-        - [QoS Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)

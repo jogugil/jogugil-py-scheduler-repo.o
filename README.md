@@ -79,6 +79,8 @@ echo "Branches created for group repository: main (polling), student (watch skel
 
 Antes de empezar, debemos tener instalados los prerequisitos: **kind**, **kubectl** y **Docker**.
 
+**Note:** *The development of the practice and the results obtained are described in [Practicas_group.md](docs/Practicas_group.md).*
+
 ### A) Construcción del entorno de trabajo
 
 #### a) Actualizar el sistema

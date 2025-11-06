@@ -223,8 +223,8 @@ Por tanto, un scheduler completo debe:
   El framework permite implementar políticas de scheduling reales, como:
 
     a) ***Nodo menos cargado*** (la que usamos).  
-    b) ***Bin Packing***: llenar nodos al máximo antes de usar nuevos ([Documentación oficial de Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)).  
-    c) ***Affinity y anti-affinity avanzada***:  
+    b) ***Bin Packing***: llenar nodos al máximo antes de usar nuevos (Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)).  
+    c) ***[Affinity y anti-affinity avanzada](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity))*** :  
           - Separar cargas sensibles.  
           - Agrupar Pods que trabajan juntos.  
     d) ***Scheduling basado en costes***:  

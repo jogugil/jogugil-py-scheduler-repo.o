@@ -195,56 +195,57 @@ before scoring.
 
 - ***What are the trade-offs between polling vs event-driven models?***
 
-        ***Ventajas:***
+       Ventajas:
             - Muy fácil de implementar.  
             - No necesita controladores sofisticados.  
             - Tolera fallos temporales de conexión.  
         
-        ***Desventajas:***  
+       Desventajas:
             - Introduce **latencia**: un Pod puede tardar en ser detectado.  
             - Genera **carga innecesaria** en el API Server por las consultas repetidas.  
             - No escala bien en clústeres grandes.
  
 - ***How do taints and tolerations interact with your scheduling logic?***
 
-        - Un **taint** en un nodo sirve para “repeler” Pods que no lo toleren.  
-        - Una **toleration** en un Pod indica que puede ejecutarse en un nodo con ese taint.
-        
-        Para un scheduler personalizado:
-            a) Debemos **filtrar nodos cuyo taint no pueda ser tolerado** por el Pod.  
-            b) Si ignoramos esto, podríamos bindear un Pod a un nodo donde **nunca podrá ejecutarse**, quedando permanentemente en `Pending`.  
-            Ejemplo:  
-                Un Pod sin tolerations **no debe** ser programado en un nodo marcado con `NoSchedule`.
-        
-        Por tanto, un scheduler completo debe:  
-            - Leer taints del nodo.  
-            - Leer tolerations del Pod.  
-            - Excluir nodos incompatibles antes de tomar una decisión.
+  - Un **taint** en un nodo sirve para “repeler” Pods que no lo toleren.  
+  - Una **toleration** en un Pod indica que puede ejecutarse en un nodo con ese taint.
+  
+  Para un scheduler personalizado:
+  - a) Debemos **filtrar nodos cuyo taint no pueda ser tolerado** por el Pod.  
+  - b) Si ignoramos esto, podríamos bindear un Pod a un nodo donde **nunca podrá ejecutarse**, quedando permanentemente en `Pending`.  
+  
+  **Ejemplo:** un Pod sin tolerations **no debe** ser programado en un nodo marcado con `NoSchedule`.
+
+  Por tanto, un scheduler completo debe:  
+  - Leer taints del nodo.  
+  - Leer tolerations del Pod.  
+  - Excluir nodos incompatibles antes de tomar una decisión.
+
+---
 
 - ***What are real-world policies you could implement using this framework?***
 
-      El framework permite implementar políticas de scheduling reales, como:
-    
-        a) ***[Nodo menos cargado](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)*** (la que usamos).
-      
-        b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos .
-      
-        c) ***[Affinity y anti-affinity avanzada](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity))*** :  
-              - Separar cargas sensibles.  
-              - Agrupar Pods que trabajan juntos.
-      
-       e) ***Ahorro energético***:  
-          - Consolidar cargas para apagar nodos poco usados.  
-          - Elegir nodos más eficientes o que esten en zonas donde tengan en cuenta el consumo energetico.
-          
-       f) ***Topología y rendimiento***:  
-          - Elegir nodos según región, zona, latencia, GPU, NVMe, etc.
-                  * [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
-                 * [Node labels (zona/región)](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#built-in-node-labels)
-                 * [NUMA / Topology-aware scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-manager/)
-      
-       g) ***Prioridades y SLAs***:  
-          - Colocar Pods prioritarios en nodos específicos.
-      
-        * [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption)/
-        * [Quality of Service (QoS) Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
+  El framework permite implementar políticas reales como:
+
+  - a) ***[Nodo menos cargado](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)*** (la que usamos).
+  
+  - b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos.
+
+  - c) ***[Affinity y Anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)***:  
+      - Separar cargas sensibles.  
+      - Agrupar Pods que trabajan juntos.
+
+  - d) ***Ahorro energético***:  
+      - Consolidar cargas para apagar nodos poco usados.  
+      - Elegir nodos más eficientes o con menor consumo energético.
+
+  - e) ***Topología y rendimiento***:  
+      - Elegir nodos según región, zona, latencia, GPU, NVMe, etc.  
+        - [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)  
+        - [Node Labels](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#built-in-node-labels)  
+        - [Topology Manager / NUMA](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-manager/)
+
+  - f) ***Prioridades y SLAs***:  
+      - Colocar Pods prioritarios en nodos específicos.  
+        - [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)  
+        - [QoS Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)

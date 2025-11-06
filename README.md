@@ -209,6 +209,7 @@ Una ves tenemos el entorno isntalado, podemos comenzar con las pruebas que nso p
    kind create cluster --name sched-lab
    kubectl cluster-info
    kubectl get nodes
+
 ```bash
 # 0) Prereqs
 #    kind, kubectl, Docker
@@ -234,6 +235,32 @@ Cleanup:
 ```bash
 make undeploy
 kind delete cluster --name sched-lab
+```
+El `Makefile`que contiene las reglas a ejecutar es:
+```bash
+APP=my-py-scheduler
+KIND_CLUSTER=sched-lab
+
+.PHONY: build kind-load deploy test logs undeploy
+
+build:
+        docker build -t $(APP):latest .
+
+kind-load:
+        kind load docker-image $(APP):latest --name $(KIND_CLUSTER)
+
+deploy:
+        kubectl apply -f rbac-deploy.yaml
+
+test:
+        kubectl apply -f test-pod.yaml
+
+logs:
+        kubectl -n kube-system logs deploy/my-scheduler -f
+
+undeploy:
+        kubectl delete -f rbac-deploy.yaml --ignore-not-found
+        kubectl delete -f test-pod.yaml --ignore-not-found
 ```
 
 ## Local run (optional)

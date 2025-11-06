@@ -61,10 +61,8 @@ py-scheduler/
 ### ✅**Checkpoint 2:**
 
 ***Understand the control loop:***
-    - **Observe**: *list unscheduled Pods:*
-    
-    - **Decide**: *pick a Node* 
-      
+    - **Observe**: *list unscheduled Pods:*    
+    - **Decide**: *pick a Node*       
     - **Act**: *bind the Pod*
  
 ## Step 4 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler

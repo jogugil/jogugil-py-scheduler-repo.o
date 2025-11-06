@@ -93,3 +93,10 @@ before scoring.
 
 ### ✅ **Checkpoint 5:**
 ***Demonstrate your extended policy via pod logs and placement.***
+
+
+# 🧠Reflection Discussion
+- ***Why is it important that your scheduler writes a Binding object instead of patching a Pod directly?***
+- ***What are the trade-offs between polling vs event-driven models?***
+- ***How do taints and tolerations interact with your scheduling logic?***
+- ***What are real-world policies you could implement using this framework?***

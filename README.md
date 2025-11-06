@@ -22,7 +22,7 @@ For this project, we did **not** use the original `init_branches.sh` script. Ins
 ### Group Members
 
 - **JavierDiazL** ()  
-- **Francesc** ()
+- **Francesc** (cescdovi@gmail.com)
 - - **jogugil** (jogugil@gmail.com) - José Javier Gutiérrez Gil  
 
 All members are collaborators of the repository on GitHub.

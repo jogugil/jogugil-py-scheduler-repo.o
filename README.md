@@ -196,7 +196,7 @@ Una ves tenemos el entorno isntalado, podemos comenzar con las pruebas que nso p
 ### Pasos
 
 0) **Prerequisitos**  
-   Asegúrate de tener instalados los siguientes programas:
+   Asegúrate de tener instalados los siguientes programas (visto con antelación):
    - Docker (para construir imágenes de los schedulers)  
    - kind (Kubernetes IN Docker, para crear clústeres locales)  
    - kubectl (cliente de Kubernetes para aplicar recursos y ver logs)

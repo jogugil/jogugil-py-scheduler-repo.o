@@ -187,6 +187,53 @@ before scoring.
 
 # 🧠Reflection Discussion
 - ***Why is it important that your scheduler writes a Binding object instead of patching a Pod directly?***
+  Porque el uso de un `Binding` es el mecanismo definido por Kubernetes para asignar un Pod a un nodo. En un principio, este mecanismo permite una escalabilidad y fiabilidad del cluster ya que comprueba si los nodos tienen permisoso para ejecutar dicho Pod, y si la carga de dicho nodo permite ejecutarlo. Lo que permite mantener una escalabilidad de la carga y una seguridad en la ejecución de los contenedores. Esta asinación ser elaiza de forma tómica y segura, es decir, o se asigna o no se asigna, evitando condiciones de carrera. 
+  Además, todo se realiza a traves del APISErver, lo que  garantiza que el flujo de control sea el correcto dentro del sistema. Lo que permite también mantener un sistema auditable, útil para depuración y trazabilidad.
+
 - ***What are the trade-offs between polling vs event-driven models?***
+
+***Ventajas:***
+    - Muy fácil de implementar.  
+    - No necesita controladores sofisticados.  
+    - Tolera fallos temporales de conexión.  
+
+***Desventajas:***  
+    - Introduce **latencia**: un Pod puede tardar en ser detectado.  
+    - Genera **carga innecesaria** en el API Server por las consultas repetidas.  
+    - No escala bien en clústeres grandes.
+ 
 - ***How do taints and tolerations interact with your scheduling logic?***
+
+- Un **taint** en un nodo sirve para “repeler” Pods que no lo toleren.  
+- Una **toleration** en un Pod indica que puede ejecutarse en un nodo con ese taint.
+
+Para un scheduler personalizado:
+    a) Debemos **filtrar nodos cuyo taint no pueda ser tolerado** por el Pod.  
+    b) Si ignoramos esto, podríamos bindear un Pod a un nodo donde **nunca podrá ejecutarse**, quedando permanentemente en `Pending`.  
+    Ejemplo:  
+        Un Pod sin tolerations **no debe** ser programado en un nodo marcado con `NoSchedule`.
+
+Por tanto, un scheduler completo debe:  
+    - Leer taints del nodo.  
+    - Leer tolerations del Pod.  
+    - Excluir nodos incompatibles antes de tomar una decisión.
+
 - ***What are real-world policies you could implement using this framework?***
+
+  El framework permite implementar políticas de scheduling reales, como:
+
+    a) ***Nodo menos cargado*** (la que usamos).  
+    b) ***Bin Packing***: llenar nodos al máximo antes de usar nuevos ([Documentación oficial de Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)).  
+    c) ***Affinity y anti-affinity avanzada***:  
+          - Separar cargas sensibles.  
+          - Agrupar Pods que trabajan juntos.  
+    d) ***Scheduling basado en costes***:  
+          - Priorizar nodos más económicos en la nube.  
+          - Evitar nodos spot cuando hay riesgo.
+   e) ***Ahorro energético***:  
+      - Consolidar cargas para apagar nodos poco usados.  
+      - Elegir nodos más eficientes.      
+   f) ***Topología y rendimiento***:  
+      - Elegir nodos según región, zona, latencia, GPU, NVMe, etc.
+   g) ***Prioridades y SLAs***:  
+      - Colocar Pods prioritarios en nodos específicos.

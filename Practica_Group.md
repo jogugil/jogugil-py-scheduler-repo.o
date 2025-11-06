@@ -12,14 +12,14 @@
   ---
 
 # Realización de la práctica:
- ## Step 0 — Set up the environment
+ ## 🧰 Step 0 — Set up the environment
  
  We set up the environment using the required installation prerequisites. We then followed the steps described in 
  section `A` of the `README.md`.
 
  In the environment we prepared, we executed the first step:
  
- ## Step 1 — Observe the Default Scheduler-. 
+ ## ⚙ Step 1 — Observe the Default Scheduler-. 
  
  1. Identify the running scheduler
 ```Bash
@@ -37,7 +37,7 @@ Describe the path:
     kubectl run → Pod created → Scheduler assigns Node → kubelet starts Pod.
 
 
- ## Step 2 — Project Setup
+ ## 🧱 Step 2 — Project Setup
 
  Initialize Project
  
@@ -57,7 +57,7 @@ py-scheduler/
 ├── test-pod.yaml
 └── requirements.txt
  ```
-## Step 3 — Implement the Polling Scheduler
+## 🧠 Step 3 — Implement the Polling Scheduler
 ### ✅**Checkpoint 2:**
 
 ***Understand the control loop:***
@@ -65,7 +65,7 @@ py-scheduler/
     - **Decide**: *pick a Node*       
     - **Act**: *bind the Pod*
  
-## Step 4 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
+## 🐳🔐🧪 Step 4 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
 
 
 ### ✅**Checkpoint 3:**
@@ -73,12 +73,12 @@ py-scheduler/
 ***Your scheduler should log a message like:***
     - Bound default/test-pod -> kind-control-plane
 
-## Step 7 — Event-Driven Scheduler (Watch API)
+## 🧩 Step 7 — Event-Driven Scheduler (Watch API)
 
 ### ✅**Checkpoint 4:**
 ***Compare responsiveness and efficiency between polling and watch approaches.***
 
-## Step 8 — Policy Extensions
+## 🧩 Step 8 — Policy Extensions
 
 1. Label-based node filtering
 ```Bash

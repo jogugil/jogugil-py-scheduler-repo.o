@@ -222,14 +222,18 @@ Por tanto, un scheduler completo debe:
 
   El framework permite implementar políticas de scheduling reales, como:
 
-    a) ***Nodo menos cargado*** (la que usamos).  
-    b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos .  
+    a) ***[Nodo menos cargado](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)*** (la que usamos).
+  
+    b) ***[Resource Bin Packing](https://kubernetes.io/docs/concepts/scheduling-eviction/resource-bin-packing/)***: llenar nodos al máximo antes de usar nuevos .
+  
     c) ***[Affinity y anti-affinity avanzada](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity))*** :  
           - Separar cargas sensibles.  
-          - Agrupar Pods que trabajan juntos.  
+          - Agrupar Pods que trabajan juntos.
+  
    e) ***Ahorro energético***:  
       - Consolidar cargas para apagar nodos poco usados.  
-      - Elegir nodos más eficientes o que esten en zonas donde tengan en cuenta el consumo energetico.      
+      - Elegir nodos más eficientes o que esten en zonas donde tengan en cuenta el consumo energetico.
+      
    f) ***Topología y rendimiento***:  
       - Elegir nodos según región, zona, latencia, GPU, NVMe, etc.
               * [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
@@ -238,5 +242,6 @@ Por tanto, un scheduler completo debe:
   
    g) ***Prioridades y SLAs***:  
       - Colocar Pods prioritarios en nodos específicos.
-          * [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption)/
-          * [Quality of Service (QoS) Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
+  
+    * [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption)/
+    * [Quality of Service (QoS) Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)

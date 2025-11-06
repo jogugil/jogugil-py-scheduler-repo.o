@@ -235,6 +235,7 @@ Por tanto, un scheduler completo debe:
               * [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
              * [Node labels (zona/región)](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#built-in-node-labels)
              * [NUMA / Topology-aware scheduling](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-manager/)
+  
    g) ***Prioridades y SLAs***:  
       - Colocar Pods prioritarios en nodos específicos.
           * [Pod Priority & Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption)/

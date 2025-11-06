@@ -183,13 +183,15 @@ kind version
 ```
 #### g) Verificar el entorno Kubernetes
 
-### B) Ejecución de la práctica
-
 Una vez configurado todo, comprobamos que MicroK8s esté funcionando correctamente y que kubectl pueda comunicarse con él.
 ```bash
 microk8s status --wait-ready
 microk8s kubectl get nodes
 ```
+
+
+### B) Ejecución de la práctica
+
 
 Una ves tenemos el entorno isntalado, podemos comenzar con las pruebas que nso piden. En este proyecto disponemos de un `Makefile` que automatiza los pasos principales de construcción, despliegue y pruebas de nuestro scheduler personalizado en Kubernetes. Cada comando `make` corresponde a una regla del `Makefile` que ejecuta varias tareas automáticamente.
 

@@ -42,6 +42,41 @@ kubectl get pods -o wide
 ### ✅**Checkpoint 1:**
 Describe the path:
     kubectl run → Pod created → Scheduler assigns Node → kubelet starts Pod.
+<p align="center">
+  <img width="1912" height="512" alt="image" src="https://github.com/user-attachments/assets/0062f874-d914-4966-b67b-9cd6f51d63e5" />
+  <br>
+  <em>Figure 2: Verification of the default scheduler and scheduling of a test Pod.</em>
+</p>
+
+
+✅ **Descripción del flujo de scheduling en Kubernetes**
+
+La **Figura 2** muestra la ejecución de los comandos utilizados para verificar que el scheduler por defecto está en funcionamiento y para observar cómo se programa un Pod sencillo dentro del clúster creado con Kind. A partir de los resultados obtenidos, podemos describir el funcionamiento interno del sistema cuando programamos un Pod:
+
+**a) Enviamos la orden de creación del Pod**  
+Ejecutamos `kubectl run test --image=nginx --restart=Never`, lo que provoca que el cliente `kubectl` envíe al API Server un objeto Pod para ser creado. En este momento, el Pod se registra pero aún no tiene un nodo asignado.
+
+**b) El Pod queda inicialmente en estado *Pending***  
+Tras su creación, el API Server almacena el Pod con `status=Pending`, ya que todavía no ha sido asociado a ningún nodo del clúster.
+
+**c) El scheduler detecta el nuevo Pod sin asignar**  
+El `kube-scheduler`, que aparece ejecutándose como se muestra en la Figura 2, observa periódicamente los Pods pendientes mediante sus mecanismos internos de *informers*.  
+Detecta que el Pod recién creado no tiene un nodo asociado (`.spec.nodeName` vacío).
+
+**d) El scheduler selecciona un nodo adecuado**  
+Una vez detectado el Pod pendiente, el scheduler evalúa los nodos disponibles.  
+En nuestro entorno Kind, la asignación habitual es al nodo de control (`sched-lab-control-plane`).  
+El scheduler realiza entonces el *binding* del Pod, actualizando su campo `.spec.nodeName`.
+
+**e) El kubelet del nodo asignado inicia el contenedor**  
+Tras el binding, el kubelet del nodo seleccionado recibe la nueva especificación, descarga la imagen `nginx` si no está disponible y comienza a crear el contenedor.  
+El estado del Pod pasa a `ContainerCreating` y finalmente a `Running`.
+
+En conjunto, estos pasos confirman que el flujo interno es el esperado:
+
+**kubectl run → API Server crea el Pod → Scheduler asigna nodo → Kubelet ejecuta el contenedor**,  
+tal como se observa en la secuencia mostrada en **Figura 2**.
+
 
 
  ## 🧱 Step 2 — Project Setup

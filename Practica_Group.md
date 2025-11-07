@@ -302,43 +302,44 @@ Nota: La función `create_namespaced_pod_binding` funciona solo para Pods Pendin
 docker rmi my-py-scheduler:latest
 ```
 
-3. Borrar la imagen dentro del nodo Kind:
+2. Borrar la imagen dentro del nodo Kind:
 ```Bash
 docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
 ```
 
-4. (Opcional) Borrar la imagen en nodos worker si existieran:
+3. (Opcional) Borrar la imagen en nodos worker si existieran:
 ```Bash
 docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
 ```
 
-5. Construirla de nuevo:
+4. Construirla de nuevo:
 ```Bash
 docker build -t my-py-scheduler:latest .
 ```
 
-6. Cargarla otra vez en Kind:
+5. Cargarla otra vez en Kind:
 ```Bash
 kind load docker-image my-py-scheduler:latest --name sched-lab
 ```
 
-7. Borramos my-scheluder y test-pod:
+6. Borramos my-scheluder y test-pod:
 ```Bash
 kubectl delete deployment my-scheduler -n kube-system
+```
+```Bash
 kubectl delete pod test-pod
 ```
-
-9. Hacemos el deploy nuevamente del scheduler modificado:
+7. Hacemos el deploy nuevamente del scheduler modificado:
 ```Bash
 kubectl apply -f rbac-deploy.yaml
 ```
 
-10. Hacemos el deploy de Test_pod:
+8. Hacemos el deploy de Test_pod:
 ```Bash
 kubectl apply -f test-pod.yaml
 ```
 
-11. Comprobamos los logs que no hayan nuevos errores:
+9. Comprobamos los logs que no hayan nuevos errores:
 ```Bash
 kubectl -n kube-system logs -f deploy/my-scheduler
 ```
@@ -490,50 +491,51 @@ spec:
 
 ```
 
-Una vez modificado el manifiesto del Pod, creamos el nuevo namespace con  `kubectl create namespace test-scheduler`. Y ejecutamos `los pasos del 1 al 11` teniendo en cuenta el nuevo namespace para el pod 'test-pod'. Al finalizar todos los pasos comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
+Una vez modificado el manifiesto del Pod, creamos el nuevo namespace con  `kubectl create namespace test-scheduler`. Y ejecutamos `los pasos del 1 al 9` teniendo en cuenta el nuevo namespace para el pod 'test-pod'. Al finalizar todos los pasos comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
 
 1. Borrar la imagen local:
 ```Bash
 docker rmi my-py-scheduler:latest
 ```
 
-3. Borrar la imagen dentro del nodo Kind:
+2. Borrar la imagen dentro del nodo Kind:
 ```Bash
 docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
 ```
 
-4. (Opcional) Borrar la imagen en nodos worker si existieran:
+3. (Opcional) Borrar la imagen en nodos worker si existieran:
 ```Bash
 docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
 ```
 
-5. Construirla de nuevo:
+4. Construirla de nuevo:
 ```Bash
 docker build -t my-py-scheduler:latest .
 ```
 
-6. Cargarla otra vez en Kind:
+5. Cargarla otra vez en Kind:
 ```Bash
 kind load docker-image my-py-scheduler:latest --name sched-lab
 ```
 
-7. Borramos my-scheluder y test-pod:
+6. Borramos my-scheluder y test-pod:
 ```Bash
 kubectl delete deployment my-scheduler -n kube-system
+```
+```Bash
 kubectl delete pod test-pod -n test-scheduler
 ```
-
-9. Hacemos el deploy nuevamente del scheduler modificado:
+7. Hacemos el deploy nuevamente del scheduler modificado:
 ```Bash
 kubectl apply -f rbac-deploy.yaml
 ```
 
-10. Hacemos el deploy de Test_pod:
+8. Hacemos el deploy de Test_pod:
 ```Bash
 kubectl apply -f test-pod.yaml -n test-scheduler
 ```
 
-11. Comprobamos los logs que no hayan nuevos errores:
+9. Comprobamos los logs que no hayan nuevos errores:
 ```Bash
 kubectl -n kube-system logs -f deploy/my-scheduler
 ```

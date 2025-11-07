@@ -314,7 +314,7 @@ docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
 
 4. Construirla de nuevo:
 ```Bash
-docker build -t my-py-scheduler:latest .
+docker build --no-cache -t my-py-scheduler:latest .
 ```
 
 5. Cargarla otra vez en Kind:
@@ -510,7 +510,7 @@ docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
 
 4. Construirla de nuevo:
 ```Bash
-docker build -t my-py-scheduler:latest .
+docker build --no-cache -t my-py-scheduler:latest .
 ```
 
 5. Cargarla otra vez en Kind:

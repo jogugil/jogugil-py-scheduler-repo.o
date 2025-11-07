@@ -155,15 +155,274 @@ El binding consiste en:
 
 Este paso actualiza el campo .spec.nodeName del Pod.  Y a partir de aquí, el kubelet del nodo asignado detecta la nueva asignación y comienza la creación del contenedor correspondiente.
     
-## 🐳🔐🧪 Step 4 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
+## 🐳🔐🧪 Step 4, 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
 
+Los pasos que hemos realizado para probar el `scheduler_polling` personalizado dentro del clúster son:
 
+a) Build: Construimos nuestra imagen Docker etiquetándola como `latest` a partir del directorio actual. Esta imagen servirá como base para nuestras ejecuciones.
+
+```Bash
+docker build -t my-py-scheduler:latest .
+```
+
+b) Load Image: Cargamos esa imagen en el clúster Kind llamado `sched-lab` para poder usarla en nuestros despliegues.
+
+```Bash
+kind load docker-image my-py-scheduler:latest --name sched-lab
+```
+
+c) RBAC: Aplicamos las reglas RBAC que autorizan a nuestro scheduler a autenticarse y operar contra el API Server con los permisos definidos (roles del scheduler). Además, desplegamos nuestro scheduler (`my_scheduler`) en el cluster (`Control Plane`).
+
+```Bash
+kubectl apply -f rbac-deploy.yaml
+```
+
+d) API Server: Consultamos al API Server para obtener el listado de Pods con la etiqueta app=my-scheduler y verificar que nuestro scheduler se ha desplegado correctamente.
+
+```Bash
+kubectl -n kube-system get pods -l app=my-scheduler
+```
+
+e) Test Pod: Creamos un Pod de prueba y lo desplegamos en el clúster para comprobar que nuestro scheduler (`my_scheduler`) obtiene el Pod creado y le asigna un nodo.
+
+```Bash
+kubectl apply -f test-pod.yaml
+kubectl get pods -o wide
+kubectl -n kube-system logs deploy/my-scheduler
+```
+
+f) Métricas: Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:
+
+f-1) Comprobar latencia
+
+```Bash
+kubectl -n kube-system logs -l app=my-scheduler-polling --timestamps
+```
+
+Tiempo t0: momento en que ejecutamos `kubectl run`
+Tiempo t1: primera línea del log donde el scheduler muestra que ha detectado un Pod pendiente (aparece "Detected Pending Pod").
+
+Latencia --> Δt = t1 – t0
+
+f-2) Comprobar carga
+
+1.Medir las peticiones generadas hacia el API Server:
+
+```Bash
+kubectl -n kube-system logs -l kube-apiserver | grep LIST | wc -l
+```
+
+2.Medir consumo del Pod del scheduler:
+```Bash
+kubectl top pod -n kube-system | grep my-scheduler
+```
+
+f-3) Medir eficiencia del flujo del scheduling con un único Pod
+
+Aunque solo haya un Pod, puede medir cómo cambia la “pipeline de scheduling” entre polling y watch.
+
+Qué medir:
+
+a) Tiempo desde Pending → Running.
+b) Veces que el scheduler “recibe” el evento.
+c) Logs redundantes en polling.
+
+Procedimiento:
+
+Lanzamos un Pod sencillo:
+```Bash
+kubectl run test --image=nginx --restart=Never
+```
+
+Obtenemos eventos:
+```Bash
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+Revisamos:
+
+- Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “No pending pods” o “Checking pending pods”.
+
+```Bash
+kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Checking pending pods" | wc -l
+```
+- Cambios de estado Pending → Running:
+```Bash
+kubectl get pod test -o jsonpath='{.status.phase}'
+```
+Antes: Pending
+Después: Running
+Tiempo total = Scheduling + Container start.
+
+- Cuántas veces el scheduler polling detecta el Pod
+```Bash
+kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Detected Pending Pod" | wc -l
+```
+(para watch)
+
+```Bash
+kubectl -n kube-system logs -l app=my-scheduler-watch | grep "Pod added" | wc -l
+```
+  
 ### ✅**Checkpoint 3:**
 
 ***Your scheduler should log a message like:***
     - Bound default/test-pod -> kind-control-plane
+    
 
 ## 🧩 Step 7 — Event-Driven Scheduler (Watch API)
+
+En este paso modificamos `my_scheduler`del cluster para que se ejecute la versión `watch`. Realizamos todos los pasos anteriores para cargar la imagen con mi nuevo `scheduler_watch` y calcular las nuevas métricas.
+
+Notar que para obtener las métricas de cada uno de los shceulers persoinalizamos hemos creado lso siguientes scripts.
+
+- ***`metrics-polling.sh`***
+```Bash
+#!/bin/bash
+
+SCHED_NS="kube-system"
+SCHED_LABEL="app=my-scheduler-polling"
+TEST_POD="test-metric-polling"
+
+echo "======================================================="
+echo " MÉTRICAS DEL SCHEDULER POLLING"
+echo "======================================================="
+
+echo "[1] Lanzamos Pod de prueba"
+T0=$(date +%s%3N)
+kubectl run $TEST_POD --image=nginx --restart=Never >/dev/null 2>&1
+
+echo "[2] Esperamos a que se generen logs"
+sleep 2
+
+echo "[3] Obtenemos logs del scheduler polling"
+kubectl -n $SCHED_NS logs -l $SCHED_LABEL --timestamps > polling.log
+
+echo "[4] Calculamos latencia (t1 - t0)"
+TS_LINE=$(grep -m1 "Detected Pending Pod" polling.log | awk '{print $1}')
+
+if [[ -z "$TS_LINE" ]]; then
+    echo "No se encontró 'Detected Pending Pod' en los logs del scheduler."
+else
+    # Convertir timestamp ISO8601 a epoch ms
+    T1=$(date -d "$TS_LINE" +%s%3N)
+    LATENCY=$((T1 - T0))
+    echo "t0 (inicio): $T0 ms"
+    echo "t1 (detección): $T1 ms"
+    echo "Latencia total: $LATENCY ms"
+fi
+
+echo
+echo "[5] Número de peticiones LIST al API Server"
+LISTS=$(kubectl -n kube-system logs -l component=kube-apiserver | grep LIST | wc -l)
+echo "Peticiones LIST: $LISTS"
+
+echo
+echo "[6] Consumo de CPU del scheduler polling"
+kubectl top pod -n $SCHED_NS | grep my-scheduler-polling || echo "top no disponible"
+
+echo
+echo "[7] Eventos Kubernetes (Pending → Running)"
+kubectl get events --sort-by=.metadata.creationTimestamp > events.log
+grep $TEST_POD events.log
+
+echo
+echo "[8] Logs redundantes del polling"
+REDUNDANT=$(grep -c "Checking pending pods" polling.log)
+echo "Iteraciones del bucle polling: $REDUNDANT"
+
+echo
+echo "[9] Número de detecciones del Pod"
+DETECTIONS=$(grep -c "Detected Pending Pod" polling.log)
+echo "Detecciones totales: $DETECTIONS"
+
+echo
+echo "[10] Estado final del Pod"
+STATE=$(kubectl get pod $TEST_POD -o jsonpath='{.status.phase}')
+echo "Estado: $STATE"
+
+echo
+echo "[11] Limpieza del Pod de prueba"
+kubectl delete pod $TEST_POD >/dev/null 2>&1
+echo "Limpieza completada"
+
+echo "======================================================="
+echo " FIN DEL SCRIPT POLLING"
+echo "======================================================="
+```
+- ***`metrics-watch.sh`***
+
+```Bash
+#!/bin/bash
+
+SCHED_NS="kube-system"
+SCHED_LABEL="app=my-scheduler-watch"
+TEST_POD="test-metric-watch"
+
+echo "======================================================="
+echo " MÉTRICAS DEL SCHEDULER WATCH"
+echo "======================================================="
+
+echo "[1] Lanzamos Pod de prueba"
+T0=$(date +%s%3N)
+kubectl run $TEST_POD --image=nginx --restart=Never >/dev/null 2>&1
+
+echo "[2] Esperamos a que se generen eventos"
+sleep 1
+
+echo "[3] Obtenemos logs del scheduler watch"
+kubectl -n $SCHED_NS logs -l $SCHED_LABEL --timestamps > watch.log
+
+echo "[4] Calculamos latencia (primer evento)"
+TS_LINE=$(grep -m1 "Pod added" watch.log | awk '{print $1}')
+
+if [[ -z "$TS_LINE" ]]; then
+    echo "No se encontró 'Pod added' en los logs del scheduler watch."
+else
+    T1=$(date -d "$TS_LINE" +%s%3N)
+    LATENCY=$((T1 - T0))
+    echo "t0 (inicio): $T0 ms"
+    echo "t1 (evento): $T1 ms"
+    echo "Latencia total: $LATENCY ms"
+fi
+
+echo
+echo "[5] Número de eventos Watch"
+ADDED=$(grep -c "Pod added" watch.log)
+UPDATED=$(grep -c "Pod updated" watch.log)
+echo "Eventos 'Pod added': $ADDED"
+echo "Eventos 'Pod updated': $UPDATED"
+
+echo
+echo "[6] Peticiones LIST al API Server"
+LISTS=$(kubectl -n kube-system logs -l component=kube-apiserver | grep LIST | wc -l)
+echo "Número de LIST: $LISTS"
+
+echo
+echo "[7] Consumo de CPU del scheduler watch"
+kubectl top pod -n $SCHED_NS | grep my-scheduler-watch || echo "top no disponible"
+
+echo
+echo "[8] Eventos Kubernetes (Pending → Running)"
+kubectl get events --sort-by=.metadata.creationTimestamp | grep $TEST_POD
+
+echo
+echo "[9] Estado final del Pod"
+STATE=$(kubectl get pod $TEST_POD -o jsonpath='{.status.phase}')
+echo "Estado: $STATE"
+
+echo
+echo "[10] Limpieza del Pod de prueba"
+kubectl delete pod $TEST_POD >/dev/null 2>&1
+echo "Limpieza completada"
+
+echo "======================================================="
+echo " FIN DEL SCRIPT WATCH"
+echo "======================================================="
+```
+
+  
+
 
 ### ✅**Checkpoint 4:**
 ***Compare responsiveness and efficiency between polling and watch approaches.***

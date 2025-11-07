@@ -17,9 +17,6 @@
  We set up the environment using the required installation prerequisites. We then followed the steps described in 
  section `A` of the `README.md`.
 
-
-
-
  In the environment we prepared, we executed the first step:
  
  ## ⚙ Step 1 — Observe the Default Scheduler-. 
@@ -199,10 +196,11 @@ f-1) Comprobar latencia
 kubectl -n kube-system logs -l app=my-scheduler-polling --timestamps
 ```
 
-Tiempo t0: momento en que ejecutamos `kubectl run`
-Tiempo t1: primera línea del log donde el scheduler muestra que ha detectado un Pod pendiente (aparece "Detected Pending Pod").
+- Tiempo t0: momento en que ejecutamos `kubectl run`
 
-Latencia --> Δt = t1 – t0
+- Tiempo t1: primera línea del log donde el scheduler muestra que ha detectado un Pod pendiente (aparece "Detected Pending Pod").
+
+- Latencia --> Δt = t1 – t0
 
 f-2) Comprobar carga
 
@@ -243,14 +241,20 @@ kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Checking pending
 ```Bash
 kubectl get pod test -o jsonpath='{.status.phase}'
 ```
-Antes: Pending
-Después: Running
-Tiempo total = Scheduling + Container start.
 
-* Cuántas veces el scheduler polling detecta el Pod
+- Antes: Pending
+
+- Después: Running
+
+- Tiempo total = Scheduling + Container start.
+
+* Cuántas veces el scheduler polling detecta el Pod:
+
+(para polling)
 ```Bash
 kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Detected Pending Pod" | wc -l
 ```
+
 (para watch)
 
 ```Bash

@@ -364,32 +364,47 @@ spec:
     image: registry.k8s.io/pause:3.9
 ```
 
-**Otra alternativa más elegante sería modificar el manifiesto RBAC para que nuestro scheduler (`my-scheduler`) tenga permisos también sobre los Pods creados en el namespace `default`.** Esto permite mantener los Pods en `default` y que nuestro scheduler personalizado pueda asignar nodos sin necesidad de cambiar el namespace de los Pods.  
+**Otra alternativa más segura es crear un namespace de prueba dedicado (`test-scheduler`) y dar permisos a nuestro scheduler (`my-scheduler`) únicamente sobre ese namespace.** Esto nos permite mantener el namespace `default` intacto y limitar el alcance de los permisos, reduciendo riesgos de seguridad.
 
-**Contras:**  
-- Dar permisos al scheduler sobre `default` expone un riesgo de seguridad: cualquier Pod en `default` podría ser manipulado por `my-scheduler`.  
-- Hay que asegurarse de no sobreescribir roles críticos ni dar más permisos de los estrictamente necesarios.  
+**Ventajas:**  
+- Limitamos los permisos de `my-scheduler` solo al namespace de prueba (`test-scheduler`).  
+- Evitamos manipular Pods críticos en `default`.  
+- Mantenemos un entorno controlado para probar y depurar nuestro scheduler.
 
-**Manifiesto RBAC modificado para permitir acceso a Pods en `default`:**  
+El hecho de tener que dar a `my-scheduler` permisos para trabajar con los Pods presentes en el namespace `default` serían:
+
+- `my-scheduler` se ejecuta en el namespace `kube-system` con acceso al API del cluster. Si le otorgamos permisos sobre `default`, podría modificar cualquier Pod existente allí.  
+- Esto implica que un atacante que comprometa nuestro scheduler podría alterar Pods críticos del sistema o de otras aplicaciones, provocando fallos, reinicios o acceso no autorizado a datos.  
+- Por eso es más seguro crear un namespace de pruebas (`test-scheduler`) y limitar los permisos del scheduler únicamente a ese namespace, evitando riesgos innecesarios.  - Además, debemos asegurarnos de no sobreescribir roles críticos ni dar permisos más amplios de los estrictamente necesarios.
+
+En este caso, con el nuevo namespace `test-scheduler`, modificamos el manifiesto `test-pod.yaml` y el manifiesto `rbac-deploy.yaml`, el cual es el que asigna los roles (permisos) a `my-scheduler`:
+
+**Manifiesto test-pod.yaml modificado qued:**
 
 ```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: test-scheduler
+spec:
+  schedulerName: my-scheduler
+  containers:
+  - name: pause
+    image: registry.k8s.io/pause:3.9
+```
+
+**Manifiesto RBAC modificado para permitir acceso a Pods en `test-scheduler`:**  
+
+```yaml
+ # ServiceAccount sigue en kube-system
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: my-scheduler
   namespace: kube-system
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: my-scheduler-role
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch", "patch", "update"]
-# Esta sección es la que añadimos o modificamos para dar permisos a nuestro scheduler
-# sobre los Pods en cualquier namespace (incluido 'default')
----
+# ClusterRoleBinding existente para kube-system
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -397,12 +412,39 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: my-scheduler-role
+  name: system:kube-scheduler
 subjects:
 - kind: ServiceAccount
   name: my-scheduler
   namespace: kube-system
 ---
+# Role para dar permisos sobre Pods en test-scheduler
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: my-scheduler-role-test
+  namespace: test-scheduler
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+---
+# RoleBinding que une Role y ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: my-scheduler-rolebinding-test
+  namespace: test-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: my-scheduler-role-test
+subjects:
+- kind: ServiceAccount
+  name: my-scheduler
+  namespace: kube-system
+---
+# Deployment del scheduler sigue en kube-system
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -422,9 +464,10 @@ spec:
         image: my-py-scheduler:latest
         imagePullPolicy: Never
         args: ["--scheduler-name","my-scheduler"]
-# Aquí no necesitamos cambiar nada; el scheduler seguirá usando el ServiceAccount con los permisos ampliados
 
-Una vez modificado el manifiesto del Pod, ejecutamos `los pasos del 1 al 11` y comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
+```
+
+Una vez modificado el manifiesto del Pod, creamos el nuevo namespace con  `kubectl create namespace test-scheduler`. Y ejecutamos `los pasos del 1 al 11`. Al finalizar todos los pasos comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
 
 
 **f) Métricas:** Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:

@@ -241,42 +241,56 @@ Noa II: Una vez modificamos el manifiesto y lanzamos el scheduler con la versió
 Hemops encontrado que el API se ha modificado y debemos cambiar el codigo python:
 
 - [StackOverflow sobre create_namespaced_binding](https://stackoverflow.com/questions/50729834/kubernetes-python-client-api-create-namespaced-binding-method-shows-target-nam?utm_source=chatgpt.com)
-- [Kubernetes API v1.30 Binding](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#binding-v1-core)
+En Kubernetes recientes, para asignar un Pod a un nodo (binding), **no se debe modificar directamente `spec.nodeName`**.  
+La forma correcta es usar un **Binding**, que es un objeto que liga un Pod a un nodo específico.  
 
-En el nuevo API, la forma correcta de asignar un Pod es **modificando directamente `spec.nodeName`** del Pod que está en estado `Pending`.  
+En Python, usando el cliente oficial (`kubernetes.client`), se hace así:
 
-Esto se hace con un PATCH a:
+1. Se crea un **V1ObjectReference** que apunta al nodo destino.
+2. Se crea un **V1ObjectMeta** con el nombre y namespace del Pod.
+3. Se crea un **V1Binding** combinando el target y los metadatos.
+4. Se llama a **`create_namespaced_pod_binding()`** para enviar el binding al API server.
 
-PATCH /api/v1/namespaces/{namespace}/pods/{name}
-spec.nodeName = <node>
+Esto asegura que el Pod se asigna al nodo deseado de forma compatible con la versión reciente del API, evitando errores como `422 Unprocessable Entity` que ocurren al intentar PATCH sobre campos prohibidos de `spec`.
 
+Referencia: [Kubernetes API v29.0.0](https://github.com/kubernetes-client/python/tree/v29.0.0)
 
-En Python, nosotros lo implementamos así:
+La función nos queda:
 
 ```python
+from kubernetes.client.models import V1Binding, V1ObjectMeta, V1ObjectReference
 def bind_pod(api: client.CoreV1Api, pod, node_name: str):
+
     try:
-        # Creamos la referencia al nodo donde queremos bindear el Pod
-        target = client.V1ObjectReference(
+        # Crear el target reference
+        target_ref = client.models.V1ObjectReference(
             kind="Node",
             api_version="v1",
             name=node_name
         )
-        # Metadatos con el nombre del Pod
-        meta = client.V1ObjectMeta(name=pod.metadata.name)
-        # Creamos el Binding
-        body = client.V1Binding(metadata=meta, target=target)
-        # Llamada correcta para Kubernetes recientes
+
+        # Crear metadata
+        metadata = client.models.V1ObjectMeta(
+            name=pod.metadata.name,
+            namespace=pod.metadata.namespace
+        )
+
+        # Crear el binding
+        binding = client.models.V1Binding(
+            target=target_ref,
+            metadata=metadata
+        )
+
+        # Llamar a la API
         api.create_namespaced_pod_binding(
             name=pod.metadata.name,
             namespace=pod.metadata.namespace,
-            body=body
+            body=binding
         )
-        print(f"[TRACE] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
     except Exception as e:
+        print(f"[ERROR] Binding failed: {str(e)}")
         import traceback
         traceback.print_exc()
-        print("ERROR DETALLADO en bind_pod:", repr(e))
 
 ```
 Nota: La función `create_namespaced_pod_binding` funciona solo para Pods Pending

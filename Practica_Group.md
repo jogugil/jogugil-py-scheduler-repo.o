@@ -356,11 +356,71 @@ metadata:
   name: test-pod
   namespace: kube-system
 spec:
+  schedulerName: my-scheduler
   containers:
-  - name: busybox
-    image: busybox
-    command: ["sleep", "3600"]
+  - name: pause
+    image: registry.k8s.io/pause:3.9
 ```
+
+**Otra alternativa más elegante sería modificar el manifiesto RBAC para que nuestro scheduler (`my-scheduler`) tenga permisos también sobre los Pods creados en el namespace `default`.** Esto permite mantener los Pods en `default` y que nuestro scheduler personalizado pueda asignar nodos sin necesidad de cambiar el namespace de los Pods.  
+
+**Contras:**  
+- Dar permisos al scheduler sobre `default` expone un riesgo de seguridad: cualquier Pod en `default` podría ser manipulado por `my-scheduler`.  
+- Hay que asegurarse de no sobreescribir roles críticos ni dar más permisos de los estrictamente necesarios.  
+
+**Manifiesto RBAC modificado para permitir acceso a Pods en `default`:**  
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: my-scheduler-role
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+# Esta sección es la que añadimos o modificamos para dar permisos a nuestro scheduler
+# sobre los Pods en cualquier namespace (incluido 'default')
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: my-scheduler-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: my-scheduler-role
+subjects:
+- kind: ServiceAccount
+  name: my-scheduler
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: my-scheduler}
+  template:
+    metadata:
+      labels: {app: my-scheduler}
+    spec:
+      serviceAccountName: my-scheduler
+      containers:
+      - name: scheduler
+        image: my-py-scheduler:latest
+        imagePullPolicy: Never
+        args: ["--scheduler-name","my-scheduler"]
+# Aquí no necesitamos cambiar nada; el scheduler seguirá usando el ServiceAccount con los permisos ampliados
 
 Una vez modificado el manifiesto del Pod, ejecutamos `los pasos del 1 al 11` y comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
 

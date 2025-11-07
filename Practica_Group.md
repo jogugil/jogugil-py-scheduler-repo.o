@@ -220,33 +220,26 @@ kubectl top pod -n kube-system | grep my-scheduler
 f-3) Medir eficiencia del flujo del scheduling con un único Pod
 
 Aunque solo haya un Pod, puede medir cómo cambia la “pipeline de scheduling” entre polling y watch.
-
-Qué medir:
-
-a) Tiempo desde Pending → Running.
-b) Veces que el scheduler “recibe” el evento.
-c) Logs redundantes en polling.
-
-Procedimiento:
-
-Lanzamos un Pod sencillo:
+ 
+ 
+- Lanzamos un Pod sencillo:
 ```Bash
 kubectl run test --image=nginx --restart=Never
 ```
 
-Obtenemos eventos:
+- Obtenemos eventos:
 ```Bash
 kubectl get events --sort-by=.metadata.creationTimestamp
 ```
 
-Revisamos:
+- Revisamos:
 
-- Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “No pending pods” o “Checking pending pods”.
+* Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “No pending pods” o “Checking pending pods”.
 
 ```Bash
 kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Checking pending pods" | wc -l
 ```
-- Cambios de estado Pending → Running:
+* Cambios de estado Pending → Running:
 ```Bash
 kubectl get pod test -o jsonpath='{.status.phase}'
 ```
@@ -254,7 +247,7 @@ Antes: Pending
 Después: Running
 Tiempo total = Scheduling + Container start.
 
-- Cuántas veces el scheduler polling detecta el Pod
+* Cuántas veces el scheduler polling detecta el Pod
 ```Bash
 kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Detected Pending Pod" | wc -l
 ```

@@ -223,8 +223,6 @@ Y para obligar a Kubernetes a usar la imagen local del nodo, la política exacta
   kubectl -n kube-system get pods -l app=my-scheduler
 ```
 
-
-
 **e) Test Pod:** Creamos un Pod de prueba y lo desplegamos en el clúster para comprobar que nuestro scheduler (`my_scheduler`) obtiene el Pod creado y le asigna un nodo.
 
 ```Bash
@@ -320,6 +318,51 @@ kubectl apply -f test-pod.yaml
 kubectl -n kube-system logs -f deploy/my-scheduler
 ```
 
+**Nota III: Nuevo error: Al ejecutar el scheduler modificado sobre test_POD**
+
+Modificamos el código Python del scheduler y ya vemos que se está ejecutando. Sin embargo, aparece un nuevo error porque no tenemos permisos para trabajar con Pods en el namespace `default`. Por tanto, tendremos que ajustar el manifiesto del Pod o los permisos del ServiceAccount.
+
+```bash
+# Comprobamos que nuestro scheduler está corriendo
+kubectl -n kube-system get pods -l app=my-scheduler
+NAME                            READY   STATUS    RESTARTS   AGE
+my-scheduler-6fbbc9c795-4drdb   1/1     Running   0          4m36s
+
+# Revisamos los logs del scheduler
+kubectl -n kube-system logs -f deploy/my-scheduler
+[polling] scheduler starting… name=my-scheduler
+[TRACE] bind_pod called for kube-system/test-pod -> sched-lab-control-plane
+
+# Creamos el Pod de prueba
+kubectl apply -f test-pod.yaml
+pod/test-pod created
+
+# Volvemos a revisar los logs del scheduler
+kubectl -n kube-system logs -f deploy/my-scheduler
+[TRACE] bind_pod called for default/test-pod -> sched-lab-control-plane
+Traceback (most recent call last):
+  File "/app/scheduler.py", line 27, in bind_pod
+    api.patch_namespaced_pod(
+kubernetes.client.exceptions.ApiException: (403)
+Reason: Forbidden
+HTTP response body: {"message":"pods \"test-pod\" is forbidden: User \"system:serviceaccount:kube-system:my-scheduler\" cannot patch resource \"pods\" in API group \"\" in the namespace \"default\""}
+```
+El nuevo error se debe a que el ServiceAccount `my-scheduler` no tiene permisos RBAC para modificar Pods en el namespace `default`. Para solucionarlo, modificamos el manifiesto de `test-pod.yaml` para que se cree en `kube-system`, donde sí tenemos permisos, de la siguiente manera:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: kube-system
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", "3600"]
+```
+
+Una vez modificado el manifiesto del Pod, ejecutamos `los pasos del 1 al 11` y comprobamos que el scheduler personalizado (`my_scheduler`) se ejecuta correctamente y asigna un nodo al Pod creado, sin generar errores de permisos.
 
 
 **f) Métricas:** Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:

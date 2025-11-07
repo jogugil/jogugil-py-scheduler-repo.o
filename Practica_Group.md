@@ -152,7 +152,7 @@ El binding consiste en:
 
 Este paso actualiza el campo .spec.nodeName del Pod.  Y a partir de aquí, el kubelet del nodo asignado detecta la nueva asignación y comienza la creación del contenedor correspondiente.
     
-## 🐳🔐🧪 Step 4, 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler
+## 🐳🔐🧪 Step 4, 5 y 6 — Build and Deploy. RBAC & Deployment. Test Your Scheduler (polling)
 
 Los pasos que hemos realizado para probar el `scheduler_polling` personalizado dentro del clúster son:
 

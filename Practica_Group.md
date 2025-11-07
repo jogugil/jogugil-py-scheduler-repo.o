@@ -258,25 +258,25 @@ Referencia: [Kubernetes API v29.0.0](https://github.com/kubernetes-client/python
 La función nos queda:
 
 ```python
-from kubernetes.client.models import V1Binding, V1ObjectMeta, V1ObjectReference
+from kubernetes.client import models
 def bind_pod(api: client.CoreV1Api, pod, node_name: str):
 
     try:
         # Crear el target reference
-        target_ref = client.models.V1ObjectReference(
+        target_ref = models.V1ObjectReference(
             kind="Node",
             api_version="v1",
             name=node_name
         )
 
         # Crear metadata
-        metadata = client.models.V1ObjectMeta(
+        metadata = models.V1ObjectMeta(
             name=pod.metadata.name,
             namespace=pod.metadata.namespace
         )
 
         # Crear el binding
-        binding = client.models.V1Binding(
+        binding = models.V1Binding(
             target=target_ref,
             metadata=metadata
         )

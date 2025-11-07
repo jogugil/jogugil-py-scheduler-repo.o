@@ -141,15 +141,17 @@ La función `choose_node()` realiza lo siguiente:
 a) Obtiene la lista completa de nodos: `nodes = api.list_node().items`  
 b) Cuenta cuántos Pods están ya asignados a cada nodo: `cnt = sum(1 for p in pods if p.spec.node_name == n.metadata.name)`  
 c) Selecciona el nodo con menos Pods, aplicando así una estrategia sencilla de “menor carga”: `if cnt < min_cnt:`  
+
  
    ✅ 3. Actuar: realizar el binding del Podç
     ```python
    bind_pod(api, pod, node_name)
     ```
 El binding consiste en:
-    a) crear una referencia al nodo: `target = client.V1ObjectReference(kind="Node", name=node_name)`
-    b) crear la estructura V1Binding: `body = client.V1Binding(target=target, metadata=client.V1ObjectMeta(name=pod.metadata.name))`
-    c) enviarla al API Server para completar la asignación: `api.create_namespaced_binding(pod.metadata.namespace, body)`
+
+a) crear una referencia al nodo: `target = client.V1ObjectReference(kind="Node", name=node_name)`
+b) crear la estructura V1Binding: `body = client.V1Binding(target=target, metadata=client.V1ObjectMeta(name=pod.metadata.name))`
+c) enviarla al API Server para completar la asignación: `api.create_namespaced_binding(pod.metadata.namespace, body)`
 
 Este paso actualiza el campo .spec.nodeName del Pod.  Y a partir de aquí, el kubelet del nodo asignado detecta la nueva asignación y comienza la creación del contenedor correspondiente.
     

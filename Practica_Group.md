@@ -137,9 +137,10 @@ La lógica de decisión está en:
 node = choose_node(api, pod)
  ```
 La función `choose_node()` realiza lo siguiente:
-a. Obtiene la lista completa de nodos: `nodes = api.list_node().items`
-b. Cuenta cuántos Pods están ya asignados a cada nodo: `cnt = sum(1 for p in pods if p.spec.node_name == n.metadata.name)`
-c. Selecciona el nodo con menos Pods, aplicando así una estrategia sencilla de “menor carga”: `if cnt < min_cnt:`
+
+a) Obtiene la lista completa de nodos: `nodes = api.list_node().items`  
+b) Cuenta cuántos Pods están ya asignados a cada nodo: `cnt = sum(1 for p in pods if p.spec.node_name == n.metadata.name)`  
+c) Selecciona el nodo con menos Pods, aplicando así una estrategia sencilla de “menor carga”: `if cnt < min_cnt:`  
  
    ✅ 3. Actuar: realizar el binding del Podç
     ```python

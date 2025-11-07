@@ -156,19 +156,19 @@ Este paso actualiza el campo .spec.nodeName del Pod.  Y a partir de aquí, el ku
 
 Los pasos que hemos realizado para probar el `scheduler_polling` personalizado dentro del clúster son:
 
-a) Build: Construimos nuestra imagen Docker etiquetándola como `latest` a partir del directorio actual. Esta imagen servirá como base para nuestras ejecuciones.
+**a) Build:** Construimos nuestra imagen Docker etiquetándola como `latest` a partir del directorio actual. Esta imagen servirá como base para nuestras ejecuciones.
 
 ```Bash
 docker build -t my-py-scheduler:latest .
 ```
 
-b) Load Image: Cargamos esa imagen en el clúster Kind llamado `sched-lab` para poder usarla en nuestros despliegues.
+**b) Load Image:** Cargamos esa imagen en el clúster Kind llamado `sched-lab` para poder usarla en nuestros despliegues.
 
 ```Bash
 kind load docker-image my-py-scheduler:latest --name sched-lab
 ```
 
-c) RBAC: Aplicamos las reglas RBAC que autorizan a nuestro scheduler a autenticarse y operar contra el API Server con los permisos definidos (roles del scheduler). Además, desplegamos nuestro scheduler (`my_scheduler`) en el cluster (`Control Plane`).
+**c) RBAC:** Aplicamos las reglas RBAC que autorizan a nuestro scheduler a autenticarse y operar contra el API Server con los permisos definidos (roles del scheduler). Además, desplegamos nuestro scheduler (`my_scheduler`) en el cluster (`Control Plane`).
 
 ```Bash
 kubectl apply -f rbac-deploy.yaml
@@ -225,7 +225,7 @@ Y para obligar a Kubernetes a usar la imagen local del nodo, la política exacta
 
 
 
-e) Test Pod: Creamos un Pod de prueba y lo desplegamos en el clúster para comprobar que nuestro scheduler (`my_scheduler`) obtiene el Pod creado y le asigna un nodo.
+**e) Test Pod:** Creamos un Pod de prueba y lo desplegamos en el clúster para comprobar que nuestro scheduler (`my_scheduler`) obtiene el Pod creado y le asigna un nodo.
 
 ```Bash
 kubectl apply -f test-pod.yaml
@@ -272,7 +272,57 @@ def bind_pod(api, pod, node_name):
         body=patch
     )
 ```
-f) Métricas: Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:
+
+**Modificamos** el código del **scheduler polling** para generar el binding del Pod y asignarle un nodo de ejecución usando la nueva versión del API (patch directo del `nodeName` en lugar de `create_namespaced_binding`). Tras aplicar la modificación, borramos los Pods existentes y la imagen cargada, para poder reconstruirla y ejecutar todo nuevamente desde cero.
+
+1. Borrar la imagen local:
+```Bash
+docker rmi my-py-scheduler:latest
+```
+
+3. Borrar la imagen dentro del nodo Kind:
+```Bash
+docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
+```
+
+4. (Opcional) Borrar la imagen en nodos worker si existieran:
+```Bash
+docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
+```
+
+5. Construirla de nuevo:
+```Bash
+docker build -t my-py-scheduler:latest .
+```
+
+6. Cargarla otra vez en Kind:
+```Bash
+kind load docker-image my-py-scheduler:latest --name sched-lab
+```
+
+7. Borramos test_pod:
+```Bash
+kubectl delete pod test-pod
+```
+
+9. Hacemos el deploy nuevamente del scheduler modificado:
+```Bash
+kubectl apply -f rbac-deploy.yaml
+```
+
+10. Hacemos el deploy de Test_pod:
+```Bash
+kubectl apply -f test-pod.yaml
+```
+
+11. Comprobamos los logs que no hayan nuevos errores:
+```Bash
+kubectl -n kube-system logs -f deploy/my-scheduler
+```
+
+
+
+**f) Métricas:** Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:
 
 f-1) Comprobar latencia
 

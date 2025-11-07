@@ -180,6 +180,51 @@ d) API Server: Consultamos al API Server para obtener el listado de Pods con la 
 kubectl -n kube-system get pods -l app=my-scheduler
 ```
 
+Nota: Hemos **encontrado un error** al realizar los pasos `c` y `d`. Esto nos pasa porque en el manifiesto `rbac-deploy.yaml` no contiene una política de pull. Entonces Kubernetes aplica su política por defecto (`imagePullPolicy = Always`). Y marca el Pod como `ImagePullBackOff`. Por tanto, añadimos una política de Pull en el manifiesto (`imagePullPolicy: Never`):
+
+```yaml
+containers:
+- name: scheduler
+  image: my-py-scheduler:latest
+  imagePullPolicy: Never
+  args: ["--scheduler-name","my-scheduler"]
+```
+
+Podenmos poner:
+
+- `imagePullPolicy: Never`: Para desarrollo local con Kind; asegura que Kubernetes solo usa la imagen local.
+
+- `imagePullPolicy: IfNotPresent`: Si la imagen está en el nodo, la usa. Si no, intenta descargarla. Adecuado para despliegues mixtos.
+  
+- `imagePullPolicy: Always`: Fuerza siempre el pull y hace fallar imágenes locales.
+
+¿Por qué ponemos `Never`?
+
+Utilizamos esa política ya que estamos trabajando con una imagen local creada a mano y cargada con:
+
+```Bash
+kind load docker-image my-py-scheduler:latest --name sched-lab
+```
+Esto hace que la imagen esté disponible solo dentro de los nodos del clúster Kind, pero NO existe en Docker Hub ni en ningún registry remoto.
+
+Por tanto:
+
+Si Kubernetes intenta descargarla → fallará (ImagePullBackOff)
+
+Si Kubernetes usa la imagen local → funcionará
+
+Y para obligar a Kubernetes a usar la imagen local del nodo, la política exacta es:
+
+  Volvemos a ejecutar el deployment:
+
+```Bash
+  kubectl -n kube-system delete pod -l app=my-scheduler
+  kubectl apply -f rbac-deploy.yaml
+  kubectl -n kube-system get pods -l app=my-scheduler
+```
+
+
+
 e) Test Pod: Creamos un Pod de prueba y lo desplegamos en el clúster para comprobar que nuestro scheduler (`my_scheduler`) obtiene el Pod creado y le asigna un nodo.
 
 ```Bash
@@ -188,6 +233,45 @@ kubectl get pods -o wide
 kubectl -n kube-system logs deploy/my-scheduler
 ```
 
+Noa II: Una vez modificado el manifiesto y lanzado el scheduler con el nuevo, nos encontramos con un nuevo error:
+
+        jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl -n kube-system logs -f my-scheduler-6fbbc9c795-7h7gz [polling] scheduler starting… name=my-scheduler error: Invalid value for `target`, must not be `None`
+
+Hemops encontrado que el API se ha modificado y debemos cambiar el codigo python:
+
+https://stackoverflow.com/questions/50729834/kubernetes-python-client-api-create-namespaced-binding-method-shows-target-nam?utm_source=chatgpt.com
+
+
+En el nuevo API : https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#binding-v1-core
+
+La forma correcta de asignar un Pod es mediante:
+
+PATCH /api/v1/namespaces/{namespace}/pods/{name}
+spec.nodeName = <node>
+
+
+que en Python es exactamente:
+
+
+```python
+api.patch_namespaced_pod(
+    name=pod.metadata.name,
+    namespace=pod.metadata.namespace,
+    body={"spec": {"nodeName": node_name}}
+)
+```
+
+por tanto, la nueva función quedará:
+
+```python
+def bind_pod(api, pod, node_name):
+    patch = {"spec": {"nodeName": node_name}}
+    api.patch_namespaced_pod(
+        name=pod.metadata.name,
+        namespace=pod.metadata.namespace,
+        body=patch
+    )
+```
 f) Métricas: Para comrpbar la latencia y la carga generada por `my_scheduler`, en su versión `polling`, lanzamos estos comandos:
 
 f-1) Comprobar latencia

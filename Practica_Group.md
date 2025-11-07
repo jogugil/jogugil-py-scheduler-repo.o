@@ -233,45 +233,53 @@ kubectl get pods -o wide
 kubectl -n kube-system logs deploy/my-scheduler
 ```
 
-Noa II: Una vez modificado el manifiesto y lanzado el scheduler con el nuevo, nos encontramos con un nuevo error:
-
+Noa II: Una vez modificamos el manifiesto y lanzamos el scheduler con la versión nueva, nos encontramos con un error:
+```Bash
         jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl -n kube-system logs -f my-scheduler-6fbbc9c795-7h7gz [polling] scheduler starting… name=my-scheduler error: Invalid value for `target`, must not be `None`
+```
 
 Hemops encontrado que el API se ha modificado y debemos cambiar el codigo python:
 
-https://stackoverflow.com/questions/50729834/kubernetes-python-client-api-create-namespaced-binding-method-shows-target-nam?utm_source=chatgpt.com
+- [StackOverflow sobre create_namespaced_binding](https://stackoverflow.com/questions/50729834/kubernetes-python-client-api-create-namespaced-binding-method-shows-target-nam?utm_source=chatgpt.com)
+- [Kubernetes API v1.30 Binding](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#binding-v1-core)
 
+En el nuevo API, la forma correcta de asignar un Pod es **modificando directamente `spec.nodeName`** del Pod que está en estado `Pending`.  
 
-En el nuevo API : https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#binding-v1-core
-
-La forma correcta de asignar un Pod es mediante:
+Esto se hace con un PATCH a:
 
 PATCH /api/v1/namespaces/{namespace}/pods/{name}
 spec.nodeName = <node>
 
 
-que en Python es exactamente:
-
-
-```python
-api.patch_namespaced_pod(
-    name=pod.metadata.name,
-    namespace=pod.metadata.namespace,
-    body={"spec": {"nodeName": node_name}}
-)
-```
-
-por tanto, la nueva función quedará:
+En Python, nosotros lo implementamos así:
 
 ```python
-def bind_pod(api, pod, node_name):
-    patch = {"spec": {"nodeName": node_name}}
-    api.patch_namespaced_pod(
-        name=pod.metadata.name,
-        namespace=pod.metadata.namespace,
-        body=patch
-    )
+def bind_pod(api: client.CoreV1Api, pod, node_name: str):
+    try:
+        # Creamos la referencia al nodo donde queremos bindear el Pod
+        target = client.V1ObjectReference(
+            kind="Node",
+            api_version="v1",
+            name=node_name
+        )
+        # Metadatos con el nombre del Pod
+        meta = client.V1ObjectMeta(name=pod.metadata.name)
+        # Creamos el Binding
+        body = client.V1Binding(metadata=meta, target=target)
+        # Llamada correcta para Kubernetes recientes
+        api.create_namespaced_pod_binding(
+            name=pod.metadata.name,
+            namespace=pod.metadata.namespace,
+            body=body
+        )
+        print(f"[TRACE] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("ERROR DETALLADO en bind_pod:", repr(e))
+
 ```
+Nota: La función `create_namespaced_pod_binding` funciona solo para Pods Pending
 
 **Modificamos** el código del **scheduler polling** para generar el binding del Pod y asignarle un nodo de ejecución usando la nueva versión del API (patch directo del `nodeName` en lugar de `create_namespaced_binding`). Tras aplicar la modificación, borramos los Pods existentes y la imagen cargada, para poder reconstruirla y ejecutar todo nuevamente desde cero.
 

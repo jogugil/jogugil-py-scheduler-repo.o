@@ -559,15 +559,25 @@ kubectl -n kube-system logs -l app=my-scheduler --timestamps
 Entonces:
 
 ```Bash
-t0 = 19:29:38.041
-t1 = 19:30:33.553
+ date -u +"%H:%M:%S.%3N"
+23:23:34.352
+
+kubectl apply -f test-pod.yaml -n test-scheduler
+
+kubectl -n kube-system logs -l app=my-scheduler --timestamps
+2025-11-08T23:23:15.656585227Z [polling] scheduler starting… name=my-scheduler
+2025-11-08T23:24:31.802015916Z Bound test-scheduler/test-pod -> sched-lab-control-plane
+
+
+t0 = 23:23:34.352
+t1 = 2025-11-08T23:24:31.802015916Z = 23:24:31.802
 
 # Calculamos la diferencia:
 
-- Minutos: 30 – 29 = 1 minuto
-- Segundos: 33.553 – 38.041 = -4.488 segundos → hay que restar 1 minuto y sumar 60 segundos → 55.512 segundos
+- Minutos: 24 – 23 = 1 minuto
+- Segundos:  31.802 – 34.352 = -2.550 segundos → hay que restar 1 minuto y sumar 60 segundos → 57.450 segundos
 
-Total Δt = 1 minuto - 4.488 s = 55.512 segundos
+Total Δt =57.450 segundos
 ```
 ✅ Por lo tanto, la **latencia aproximada** es **55,5 segundos.**
  

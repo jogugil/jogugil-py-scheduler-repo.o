@@ -254,44 +254,20 @@ En Python, usando el cliente oficial (`kubernetes.client`), se hace así:
 La función nos queda:
 
 ```python
-from kubernetes.client import models
 def bind_pod(api: client.CoreV1Api, pod, node_name: str):
-
     try:
-        # Crear el target reference
-        target_ref = models.V1ObjectReference(
-            kind="Node",
-            api_version="v1",
-            name=node_name
-        )
-
-        # Crear metadata
-        metadata = models.V1ObjectMeta(
-            name=pod.metadata.name,
-            namespace=pod.metadata.namespace
-        )
-
-        # Crear el binding
-        binding = models.V1Binding(
-            target=target_ref,
-            metadata=metadata
-        )
-
-        # Llamar a la API
-        api.create_namespaced_pod_binding(
-            name=pod.metadata.name,
-            namespace=pod.metadata.namespace,
-            body=binding
-        )
+        target = client.V1ObjectReference(kind="Node", name=node_name)
+        meta = client.V1ObjectMeta(name=pod.metadata.name)
+        body = client.V1Binding(target=target, metadata=meta)
+        api.create_namespaced_binding(pod.metadata.namespace, body, _preload_cont>
     except Exception as e:
-        print(f"[ERROR] Binding failed: {str(e)}")
         import traceback
         traceback.print_exc()
+        print("ERROR DETALLADO:", repr(e))
 
 ```
-Nota: La función `create_namespaced_pod_binding` funciona solo para Pods Pending
 
-**Modificamos** el código del **scheduler polling** para generar el binding del Pod y asignarle un nodo de ejecución usando la nueva versión del API (patch directo del `nodeName` en lugar de `create_namespaced_binding`). Tras aplicar la modificación, borramos los Pods existentes y la imagen cargada, para poder reconstruirla y ejecutar todo nuevamente desde cero.
+**Modificamos** el código del **scheduler polling** para generar el binding del Pod y asignarle un nodo de ejecución usando el parámetro que evita la serialización del evento de asignación y por tanto la excepción. Tras aplicar la modificación, borramos los Pods existentes y la imagen cargada, para poder reconstruirla y ejecutar todo nuevamente desde cero.
 
 1. Borrar la imagen local:
 ```Bash
@@ -338,6 +314,36 @@ kubectl apply -f test-pod.yaml
 9. Comprobamos los logs que no hayan nuevos errores:
 ```Bash
 kubectl -n kube-system logs -f deploy/my-scheduler
+```
+
+Después de realizar algunas pruebas, observé que el Pod sí se asigna a un nodo:
+
+```bash
+kubectl -n test-scheduler get pod test-pod -w
+
+NAME       READY   STATUS             RESTARTS   AGE
+test-pod   0/1     Pending            0          0s
+test-pod   0/1     ContainerCreating  0          0s
+test-pod   1/1     Running            0          3s
+```
+
+Al revisar los eventos en el namespace donde se encuentra el Pod y los logs de my-scheduler, podemos confirmar que es nuestro scheduler personalizado (my-scheduler) quien asignó el nodo al Pod.
+
+```bash
+kubectl -n test-scheduler get events --field-selector involvedObject.name=test-pod --sort-by='.metadata.creationTimestamp'
+
+LAST SEEN   TYPE     REASON    OBJECT         MESSAGE
+53s         Normal   Pulled    pod/test-pod   Container image "registry.k8s.io/pause:3.9" already present on machine
+53s         Normal   Created   pod/test-pod   Created container pause
+53s         Normal   Started   pod/test-pod   Started container pause
+```
+Y:
+
+```bash
+kubectl -n kube-system logs -f my-scheduler-6fbbc9c795-pfxw9
+
+[polling] scheduler starting… name=my-scheduler
+Bound test-scheduler/test-pod -> sched-lab-control-plane
 ```
 
 **Nota III: Nuevo error: Al ejecutar el scheduler modificado sobre test_POD**
@@ -541,7 +547,7 @@ kubectl -n kube-system logs -f deploy/my-scheduler
 f-1) Comprobar latencia
 
 ```Bash
-kubectl -n kube-system logs -l app=my-scheduler-polling --timestamps
+kubectl -n kube-system logs -l app=my-scheduler --timestamps
 ```
 
 - Tiempo t0: momento en que ejecutamos `kubectl run`
@@ -549,66 +555,196 @@ kubectl -n kube-system logs -l app=my-scheduler-polling --timestamps
 - Tiempo t1: primera línea del log donde el scheduler muestra que ha detectado un Pod pendiente (aparece "Detected Pending Pod").
 
 - Latencia --> Δt = t1 – t0
+- 
+Entonces:
+
+```Bash
+
+t0 = 19:29:38.041
+t1 = 19:30:33.553
+
+# Calculamos la diferencia:
+
+- Minutos: 30 – 29 = 1 minuto
+- Segundos: 33.553 – 38.041 = -4.488 segundos → hay que restar 1 minuto y sumar 60 segundos → 55.512 segundos
+
+Total Δt = 1 minuto - 4.488 s = 55.512 segundos
+```
+✅ Por lo tanto, la **latencia aproximada** es **55,5 segundos.**
+ 
+
 
 f-2) Comprobar carga
 
 1.Medir las peticiones generadas hacia el API Server:
 
+Primero, identificamos el pod del API Server en Kind:
+
 ```Bash
-kubectl -n kube-system logs -l kube-apiserver | grep LIST | wc -l
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl -n kube-system get pods | grep apiserver
+kube-apiserver-sched-lab-control-plane            1/1     Running   0             43m
 ```
 
+y luego calculamos el número de operaciones LIST que ha recibido el API Server:
+
+```Bash
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl -n kube-system logs kube-apiserver-sched-lab-control-plane | grep LIST | wc -l
+2
+```
+Por tanto **la carca** que genera el scheduler **(`my-scheduler`)** es **2** (cuántas veces el scheduler hizo un Bound al pod en sus logs).
+
 2.Medir consumo del Pod del scheduler:
+
 ```Bash
 kubectl top pod -n kube-system | grep my-scheduler
 ```
+Para poder usar `kubectl top` y ver el `consumo de CPU` y `memoria` del `Pod my-scheduler`, es necesario que el clúster tenga `habilitado` el `metrics-server`, ya que este servicio recopila y expone las métricas de los pods.
 
+Pasos:
+
+a) Instalar metrics-server (en Kind, si aún no está):
+
+```Bash
+curl -LO https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+```
+Añadimos el flag `--kubelet-insecure-tls` al container para que confie en lso certificados dentro de kind:
+
+```Bash
+kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+```
+b) Esperar unos minutos a que el metrics-server se despliegue y esté listo:
+```Bash
+kubectl get pods -n kube-system | grep metrics-server
+```
+
+c) Una vez activo, se puede consultar el consumo de my-scheduler con:
+```Bash
+kubectl top pod -n kube-system | grep my-scheduler
+
+```
+Aplicando el comando anterior nos da:
+```Bash
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler$ kubectl top pod -n kube-system | grep my-scheduler
+my-scheduler-6fbbc9c795-pfxw9                     1m           59Mi
+```
+Eso significa que `my-scheduler` está usando actualmente:
+
+- CPU: 1m → 1 millicore, es decir, aproximadamente el 0,1 % de un núcleo de CPU del nodo.
+
+- Memoria: 59Mi → 59 MiB de memoria RAM consumida
+
+Notar que es poco porque sólo hemos utilizado el pod `test_pod`. En cualquier caso el objetivo es comprobar que nuestro scheduler personalizao funciona dentro del cluster y asigna el nodo a los pods que le asignmamos.
+  
 f-3) Medir eficiencia del flujo del scheduling con un único Pod
 
-Aunque solo haya un Pod, puede medir cómo cambia la “pipeline de scheduling” entre polling y watch.
+Aunque solo haya un Pod, puede medir cómo cambia la “pipeline de scheduling” entre polling y watch. Vamos a crear ahora un Pod con un servbidor nginx.
  
- 
-- Lanzamos un Pod sencillo:
+  a) Cargamos la imagen de Nginx en tu cluster KIND. Como el clúster no tiene acceso directo a internet para descargar imágenes, primero traemos la imagen y la cargamos en KIND:
+  
 ```Bash
-kubectl run test --image=nginx --restart=Never
+docker pull nginx:latest
+kind load docker-image nginx:latest --name sched-lab
 ```
-
+  b) Creamos el manifiesto del Pod, indicando explícitamente que use tu scheduler personalizado (my-scheduler) y que ejecute Nginx:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  namespace: test-scheduler
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  schedulerName: my-scheduler
+  restartPolicy: Never
+```
+ c) Lanzamos el Pod de prueba asociado al servidor nginx:
+ 
+```Bash
+kubectl apply -f test_nginx_pod.yaml
+```
 - Obtenemos eventos:
 ```Bash
-kubectl get events --sort-by=.metadata.creationTimestamp
+kubectl get events -n test-scheduler --sort-by=.metadata.creationTimestamp
 ```
 
-- Revisamos:
+d) Revisamos:
 
-* Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “No pending pods” o “Checking pending pods”.
+* Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “Pending”.
 
 ```Bash
-kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Checking pending pods" | wc -l
+kubectl -n test-scheduler get pod test -o custom-olumns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
+```
+```Bash
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler$ kubectl -n test-scheduler get pod test -o custom-columns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
+TIME                   STATUS
+2025-11-08T21:04:46Z   Running
+2025-11-08T21:04:46Z   Running
+2025-11-08T21:04:46Z   Succeeded
+2025-11-08T21:04:46Z   Succeeded
+2025-11-08T21:04:46Z   Succeeded
+2025-11-08T21:04:46Z   Succeeded
+2025-11-08T21:06:53Z   Pending
+2025-11-08T21:06:53Z   Pending
+2025-11-08T21:06:53Z   Pending
+2025-11-08T21:06:53Z   Running
 ```
 * Cambios de estado Pending → Running:
+  
 ```Bash
-kubectl get pod test -o jsonpath='{.status.phase}'
+creation=$(kubectl -n test-scheduler get pod test -o jsonpath='{.metadata.creationTimestamp}')
+start=$(kubectl -n test-scheduler get pod test -o jsonpath='{.status.startTime}')
+echo "Tiempo total en segundos: $(( $(date -d "$start" +%s) - $(date -d "$creation" +%s) ))"
 ```
 
 - Antes: Pending
-
 - Después: Running
-
 - Tiempo total = Scheduling + Container start.
 
-* Cuántas veces el scheduler polling detecta el Pod:
+ **El resultado son : Tiempo total en segundos: 4**
 
-(para polling)
-```Bash
-kubectl -n kube-system logs -l app=my-scheduler-polling | grep "Detected Pending Pod" | wc -l
-```
 
-(para watch)
+Tambiém podemos verlo con los eventos que genera `my-scheduler` :
 
 ```Bash
-kubectl -n kube-system logs -l app=my-scheduler-watch | grep "Pod added" | wc -l
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp
+LAST SEEN   TYPE     REASON    OBJECT     MESSAGE
+11m         Normal   Pulling   pod/test   Pulling image "nginx"
+11m         Normal   Pulled    pod/test   Successfully pulled image "nginx" in 943ms (943ms including waiting). Image size: 59774010 bytes.
+11m         Normal   Created   pod/test   Created container nginx
+11m         Normal   Started   pod/test   Started container nginx
+5m47s       Normal   Killing   pod/test   Stopping container nginx
+5m33s       Normal   Pulling   pod/test   Pulling image "nginx"
+5m32s       Normal   Pulled    pod/test   Successfully pulled image "nginx" in 944ms (944ms including waiting). Image size: 59774010 bytes.
+5m32s       Normal   Created   pod/test   Created container nginx
+5m32s       Normal   Started   pod/test   Started container nginx
+3m36s       Normal   Killing   pod/test   Stopping container nginx
+3m25s       Normal   Pulling   pod/test   Pulling image "nginx"
+3m24s       Normal   Pulled    pod/test   Successfully pulled image "nginx" in 947ms (947ms including waiting). Image size: 59774010 bytes.
+3m24s       Normal   Created   pod/test   Created container nginx
+3m24s       Normal   Started   pod/test   Started container nginx
 ```
-  
+Para obtenr la latencia de `my-scheduler` desde que detecta el Pod de nginx (`Pulling`) hasta que el Pod cambia a `Started`:
+
+```Bash
+kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp \
+-o jsonpath='{range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}' | grep -E 'Pulling|Started' | awk '
+/Pulling/ {pull=$1; pull_time=$2}
+/Started/ {start=$1; start_time=$2; print "Interval: " pull " -> " start ", duration approx: " (mktime(gensub(/[-:T]/," ","g",start))-mktime(gensub(/[-:T]/," ","g",pull))) "s"}'
+```
+El resultado de aplicar el comadno es:
+
+```Bash
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp \
+-o jsonpath='{range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}' | grep -E 'Pulling|Started' | awk '
+/Pulling/ {pull=$1; pull_time=$2}
+/Started/ {start=$1; start_time=$2; print "Interval: " pull " -> " start ", duration approx: " (mktime(gensub(/[-:T]/," ","g",start))-mktime(gensub(/[-:T]/," ","g",pull))) "s"}'
+Interval: 2025-11-08T20:58:49Z -> 2025-11-08T20:58:50Z, duration approx: 1s
+Interval: 2025-11-08T21:04:49Z -> 2025-11-08T21:04:50Z, duration approx: 1s
+Interval: 2025-11-08T21:06:57Z -> 2025-11-08T21:06:58Z, duration approx: 1s
+```
+
 ### ✅**Checkpoint 3:**
 
 ***Your scheduler should log a message like:***

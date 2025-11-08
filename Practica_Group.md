@@ -559,7 +559,6 @@ kubectl -n kube-system logs -l app=my-scheduler --timestamps
 Entonces:
 
 ```Bash
-
 t0 = 19:29:38.041
 t1 = 19:30:33.553
 

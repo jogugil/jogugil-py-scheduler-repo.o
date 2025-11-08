@@ -238,22 +238,18 @@ Noa II: Una vez modificamos el manifiesto y lanzamos el scheduler con la versió
         jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl -n kube-system logs -f my-scheduler-6fbbc9c795-7h7gz [polling] scheduler starting… name=my-scheduler error: Invalid value for `target`, must not be `None`
 ```
 
-Hemops encontrado que el API se ha modificado y debemos cambiar el codigo python:
+Hemos encontrado que el error aparece desde 2018 y quye hoy ern día no hay solución:
 
+- [Errro client python API Kubernetes](https://github.com/kubernetes-client/python/issues/825)
 - [StackOverflow sobre create_namespaced_binding](https://stackoverflow.com/questions/50729834/kubernetes-python-client-api-create-namespaced-binding-method-shows-target-nam?utm_source=chatgpt.com)
-En Kubernetes recientes, para asignar un Pod a un nodo (binding), **no se debe modificar directamente `spec.nodeName`**.  
-La forma correcta es usar un **Binding**, que es un objeto que liga un Pod a un nodo específico.  
-
+  
 En Python, usando el cliente oficial (`kubernetes.client`), se hace así:
 
 1. Se crea un **V1ObjectReference** que apunta al nodo destino.
 2. Se crea un **V1ObjectMeta** con el nombre y namespace del Pod.
 3. Se crea un **V1Binding** combinando el target y los metadatos.
-4. Se llama a **`create_namespaced_pod_binding()`** para enviar el binding al API server.
-
-Esto asegura que el Pod se asigna al nodo deseado de forma compatible con la versión reciente del API, evitando errores como `422 Unprocessable Entity` que ocurren al intentar PATCH sobre campos prohibidos de `spec`.
-
-Referencia: [Kubernetes API v29.0.0](https://github.com/kubernetes-client/python/tree/v29.0.0)
+4. Se llama a **`create_namespaced_pod_binding()`** para enviar el binding al API server. O seguir utilizando
+   **`create_namespaced_binding()`** pero añadiendo el parámetro `_preload_content=False` para evbitar serializar el objeto y que salkete la excepción del error.
 
 La función nos queda:
 

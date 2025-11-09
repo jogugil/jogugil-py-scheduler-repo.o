@@ -89,9 +89,9 @@ Antes de empezar, debemos tener instalados los prerequisitos: **kind**, **kubect
 # Actualizamos los paquetes del sistema
 sudo apt update && sudo apt upgrade -y
 ```
-#### b) Instalar Docker
+#### b) Instalamos Docker
 
-Docker nos permite construir las imágenes que luego importaremos a MicroK8s o usaremos en kind si deseamos probar en un clúster ligero alternativo.
+Docker nos permite construir las imágenes que luego importaremos a nbuestro cluster usando kind (clúster ligero alternativo).
 
 ```bash
 # Instalamos dependencias necesarias
@@ -114,38 +114,15 @@ docker --version
 
 ```
 
-#### Note: podemos añadir nuestro usuario al grupo docker para no usar sudo
+#### Nota: podemos añadir nuestro usuario al grupo docker para no usar sudo
 ```bash
 sudo usermod -aG docker $USER
 newgrp docke
 ```
-#### c) Instalar MicroK8s
 
-MicroK8s nos proporciona un clúster Kubernetes ligero, ideal para entornos locales o de desarrollo.
-```bash
-# Instalamos MicroK8s
-sudo snap install microk8s --classic
+#### c) Instalamos kubectl
 
-# Añadimos nuestro usuario al grupo microk8s
-sudo usermod -aG microk8s $USER
-newgrp microk8s
-
-# Verificamos el estado del clúster
-microk8s status --wait-ready
-```
-
-#### d) Habilitamo los complementos necesarios en MicroK8s
-
-Activaremos algunos módulos esenciales para ejecutar nuestro scheduler y los Pods de prueba.
-```bash
-# Habilitamos DNS, Dashboard y Storage
-microk8s enable dns dashboard storage
-```
- Nota: Con esto, el clúster tendrá resolución de nombres interna, almacenamiento persistente y un panel de control web.
-
-#### e) Instalamos kubectl
-
-Aunque MicroK8s ya incluye microk8s kubectl, es recomendable instalar kubectl globalmente para usarlo con MicroK8s, kind u otros clústeres.
+Instalamos kubectl globalmente para usarlo con kind.
 
 ```bash
 # Descargamos la versión estable de kubectl
@@ -161,13 +138,8 @@ sudo mv kubectl /usr/local/bin/
 kubectl version --client
 ```
 
-Nota: Podemos crear un alias para usar el kubectl de MicroK8s por defecto:
 
-```bash
-sudo snap alias microk8s.kubectl kubectl
-```
-
-#### f) Instalar kind (Kubernetes IN Docker)
+#### d) Instalamos kind (Kubernetes IN Docker)
 
 Kind nos permitirá levantar clústeres de Kubernetes dentro de contenedores Docker, útil para probar nuestro scheduler en entornos aislados o de CI/CD.
 ```bash
@@ -183,15 +155,16 @@ sudo mv ./kind /usr/local/bin/kind
 # Verificamos la instalación
 kind version
 ```
-#### g) Verificar el entorno Kubernetes
+#### e) Verificamos el entorno Kubernetes
 
-Una vez configurado todo, comprobamos que MicroK8s esté funcionando correctamente y que kubectl pueda comunicarse con él.
+Una vez configurado todo, comprobamos que esté tofo funcionando correctamente y que kubectl pueda comunicarse con él.
+
 ```bash
-microk8s status --wait-ready
-microk8s kubectl get nodes
+kind --version
+kubectl version --client
+kind help
+kubectl help
 ```
-
-
 ### B) Ejecución de la práctica
 
 

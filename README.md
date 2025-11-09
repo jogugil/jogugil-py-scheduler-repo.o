@@ -21,7 +21,7 @@ For this project, we did **not** use the original `init_branches.sh` script. Ins
 
 ### Group Members
 
-- **JavierDiazL** ()  
+- **JavierDiazL** (javidi2001@gmail.com) - José Javier Díaz León  
 - **Francesc** (cescdovi@gmail.com)
 - **jogugil** (jogugil@gmail.com) - José Javier Gutiérrez Gil  
 

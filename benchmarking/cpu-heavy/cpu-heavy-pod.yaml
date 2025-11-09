@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-heavy-pod
+  namespace: test-scheduler
+spec:
+  schedulerName: my-scheduler
+  containers:
+  - name: cpu-heavy
+    image: cpu-heavy:latest

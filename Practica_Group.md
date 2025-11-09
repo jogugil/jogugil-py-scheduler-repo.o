@@ -577,12 +577,10 @@ t1 = 2025-11-08T23:24:31.802015916Z = 23:24:31.802
 - Minutos: 24 – 23 = 1 minuto
 - Segundos:  31.802 – 34.352 = -2.550 segundos → hay que restar 1 minuto y sumar 60 segundos → 57.450 segundos
 
-Total Δt =57.450 segundos
+Total Δt = 57.450 segundos
 ```
-✅ Por lo tanto, la **latencia aproximada** es **55,5 segundos.**
+✅ Por lo tanto, la **latencia aproximada** es **57.450 segundos.** (hay que tneer en cuenta que se ha lanzado de forma manual en shell y eso retarda bastante. Mediante un script dicha latencia será menor)
  
-
-
 f-2) Comprobar carga
 
 1.Medir las peticiones generadas hacia el API Server:

@@ -652,7 +652,7 @@ d) Revisamos:
 * Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “Pending”.
 
 ```Bash
-kubectl -n test-scheduler get pod test-nginx-pod -o custom-olumns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
+kubectl -n test-scheduler get pod test-nginx-pod -o custom-columns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
 ```
 ```Bash
 jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler$ kubectl -n test-scheduler get pod test-nginx-pod -o custom-columns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w

@@ -420,10 +420,10 @@ spec:
     image: registry.k8s.io/pause:3.9
 ```
 
-**Manifiesto RBAC modificado para permitir acceso a Pods en `test-scheduler`:**  
+**Manifiesto RBAC modificado para permitir acceso a Pods en `test-scheduler`:** . De esta manera tenemos Role(permisos) tanto para `kube-system` cómo para ´test-scheduler`. Permisos tanto para los namespaces como para el clúster. 
 
 ```yaml
-  # ServiceAccount en kube-system
+# ServiceAccount en kube-system
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -435,8 +435,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: my-scheduler-clusterrole
-  labels:
-    app: my-scheduler
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -462,8 +460,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: my-scheduler-clusterrolebinding
-  labels:
-    app: my-scheduler
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -473,7 +469,33 @@ subjects:
   name: my-scheduler
   namespace: kube-system
 ---
-# Role ESPECÍFICO para test-scheduler (opcional, para permisos adicionales)
+# 🔥 NUEVO: Role para kube-system
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: my-scheduler-role-kube-system
+  namespace: kube-system  # ✅ Para kube-system
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+---
+# 🔥 NUEVO: RoleBinding para kube-system
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: my-scheduler-rolebinding-kube-system
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: my-scheduler-role-kube-system
+subjects:
+- kind: ServiceAccount
+  name: my-scheduler
+  namespace: kube-system
+---
+# Role para test-scheduler (el que ya tenías)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -484,7 +506,7 @@ rules:
   resources: ["pods"]
   verbs: ["get", "list", "watch", "patch", "update"]
 ---
-# RoleBinding para el Role específico
+# RoleBinding para test-scheduler (el que ya tenías)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -508,11 +530,11 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: 
+    matchLabels:
       app: my-scheduler
   template:
     metadata:
-      labels: 
+      labels:
         app: my-scheduler
     spec:
       serviceAccountName: my-scheduler

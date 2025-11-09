@@ -628,7 +628,7 @@ kind load docker-image nginx:latest --name sched-lab
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test
+  name: test-nginx-pod
   namespace: test-scheduler
 spec:
   containers:

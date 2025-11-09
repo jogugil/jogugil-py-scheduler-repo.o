@@ -1,14 +1,45 @@
 #!/bin/bash
 set -e
 
-CLUSTER_NAME="sched-lab"
+
+# =============================================
+# Parámetros
+# =============================================
+SCHED_IMPL=${1:-polling}   # polling o watch
+NUM_PODS=${2:-20}          # Número de pods por tipo
 NAMESPACE="test-scheduler"
+CLUSTER_NAME="sched-lab"
+RESULTS_JSON="scheduler_metrics_$(date +%Y%m%d_%H%M%S).json"
+
+# Manifiestos
+CLUSTERT_SETUP="kind-cluster.yaml"
+RBAC_SCHEDULER="rbac-deploy.yaml"
+CPU_POD="./cpu-heavy/cpu-heavy-pod.yaml"
+NGINX_POD="./nginx-pod/nginx_pod.yaml"
+RAM_POD="./ram-heavy/ram-heavy-pod.yaml"
+BASIC_POD="./test-basic/test-basic.yaml"
+
+# Imágenes
 SCHED_IMAGE="my-py-scheduler:latest"
 CPU_IMAGE="cpu-heavy:latest"
 RAM_IMAGE="ram-heavy:latest"
-RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
-BASIC_IMAGE="pause:3.9"
 NGINX_IMAGE="nginx:latest"
+BASIC_IMAGE="pause:3.9"
+
+# Rutas relativas
+POLLING_PATH="../../variants/polling/scheduler.py"
+WATCH_PATH="../../variants/watch-skeleton/scheduler.py"
+DOCKERFILE_PATH="../../Dockerfile"
+RBAC_PATH="../../rbac-deploy.yaml"
+
+# Parametrop Debug y Métricas
+RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
+LOGOUT_DEBUG="log/bechmarking.log"
+
+
+# Pods
+POD_TYPES=("cpu" "ram" "nginx" "basic")
+
 
 # ========================
 # Funciones
@@ -38,30 +69,45 @@ wait_for_image() {
 
 # Carga y construye imagen en todos los nodos
 load_image_to_cluster() {
-    local IMAGE_NAME=$1
-    local BUILD_DIR=$2
+    local IMAGE_NAME=$1                     # Guardamos el nombre de la imagen que queremos construir y cargar
+    local BUILD_DIR=$2                      # Guardamos el directorio desde el que construiremos la imagen
+    local ONLY_MASTER=$3                  # true → cargar solo en control-plane; false → solo workers
 
-    echo "=== Construyendo imagen $IMAGE_NAME ==="
-    docker build -t "$IMAGE_NAME" "$BUILD_DIR"
+    echo "=== Construyendo imagen [$IMAGE_NAME] desde [$BUILD_DIR] ==="   # Informamos de que iniciamos la construcción
+    docker build -t "$IMAGE_NAME" "$BUILD_DIR"                            # Construimos la imagen Docker con la etiqueta indicada
 
-    echo "=== Cargando imagen $IMAGE_NAME en Kind ==="
-    kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME"
+    ALL_NODES=$(kind get nodes --name "$CLUSTER_NAME")   # Obtenemos todos los nodos del clúster
+    # Seleccionamos los nodos destino
+    local TARGET_NODES
+    if [[ "$ONLY_MASTER" == "true" ]]; then
+        TARGET_NODES=$(echo "$ALL_NODES" | grep "control-plane")
+    else
+        TARGET_NODES=$(echo "$ALL_NODES" | grep "worker")
 
-    for NODE in $(kind get nodes --name "$CLUSTER_NAME"); do
-        wait_for_image "$IMAGE_NAME" "$NODE"
+        # Si no hay workers, usamos el control-plane
+        if [[ -z "$TARGET_NODES" ]]; then
+            TARGET_NODES="$ALL_NODES"
+        fi
+    fi
+    # De esta forma optimizamos cuando el scheduler asigna a cualquier nodo el Pod. Ya tenemos su imagen cargada y optimizamos tiempo
+    for NODE in $TARGET_NODES; do             # Recorremos la lista de nodos donde quiero cargar la imagen (wrokers <- Pods, controil Plane <- scheduler)
+        echo "=== Cargando imagen $IMAGE_NAME en el node :[$NODE] ==="
+        kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$NODE"  # Cargamos la imagen en el nodo que deseamos 
+        wait_for_image "$IMAGE_NAME" "$NODE"  # Esperamos a que cada nodo vea la imagen
     done
-    echo "=== Imagen $IMAGE_NAME disponible en todos los nodos ==="
+
+    echo "=== Imagen $IMAGE_NAME disponible en todos los nodos ==="       # Confirmamos que la imagen ya está disponible en todos los nodos
 }
 
 # Crear clúster nuevo o reiniciar existente
 create_cluster() {
     if kind get clusters | grep -q "^$CLUSTER_NAME$"; then
         echo "=== Eliminando cluster existente $CLUSTER_NAME ==="
-        kind delete cluster --name "$CLUSTER_NAME"
+        kind delete cluster --name "$CLUSTER_NAME"  >/dev/null 2>&1 || true
     fi
 
     echo "=== Creando cluster $CLUSTER_NAME ==="
-    kind create cluster --name "$CLUSTER_NAME"
+    kind create cluster --name "$CLUSTER_NAME"  --config $CLUSTERT_SETUP
 
     echo -n "Esperando nodo control-plane Ready"
     until kubectl get node "$CLUSTER_NAME-control-plane" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
@@ -82,33 +128,48 @@ clean_namespace() {
     fi
 }
 
-# ========================
+# ========================================================
 # Función: seleccionar y copiar la variante del scheduler
-# ========================
+# ========================================================
+# =============================================
+# Función para copiar el scheduler seleccionado
+# =============================================
+copy_scheduler() {
+    local SCHED_IMPL=$1
+    case "$SCHED_VARIANT" in
+        polling)
+            echo "Copiando scheduler-polling..."
+            cp "$POLLING_PATH" ./scheduler.py
+            ;;
+        watch)
+            echo "Copiando scheduler-watch..."
+            cp "$WATCH_PATH" ./scheduler.py
+            ;;
+        *)
+            echo "Implementación desconocida: $SCHED_VARIANT"
+            exit 1
+        ;;
+    esac
+}
 select_scheduler_variant() {
     local VARIANT_PARAM=$1
     local DEFAULT_VARIANT="watch"
+    local SCHED_VARIANT=$DEFAULT_VARIANT
 
-    if [[ -z "$VARIANT_PARAM" ]]; then
-        SCHED_VARIANT="$DEFAULT_VARIANT"
-        echo "No se pasó parámetro de scheduler, se usará por defecto: $SCHED_VARIANT"
-    elif [[ "$VARIANT_PARAM" != "polling" && "$VARIANT_PARAM" != "watch" ]]; then
-        echo "Parámetro inválido '$VARIANT_PARAM'. Solo se permiten 'polling' o 'watch'. Se usará por defecto: $DEFAULT_VARIANT"
-        SCHED_VARIANT="$DEFAULT_VARIANT"
-    else
-        SCHED_VARIANT="$VARIANT_PARAM"
-    fi
-
-    echo "=== Variante de scheduler seleccionada: $SCHED_VARIANT ==="
-
-    case "$SCHED_VARIANT" in
-        polling)
-            cp ../../variants/polling/scheduler.py ./scheduler.py
+    case "$VARIANT_PARAM" in
+        "")
+            echo "No se pasó parámetro de scheduler, se usará por defecto: $SCHED_VARIANT"
             ;;
-        watch)
-            cp ../../variants/watch-skeleton/scheduler.py ./scheduler.py
+        polling|watch)
+            SCHED_VARIANT="$VARIANT_PARAM"
+            ;;
+        *)
+            echo "Parámetro inválido '$VARIANT_PARAM'. Solo se permiten 'polling' o 'watch'. Se usará por defecto: $DEFAULT_VARIANT"
             ;;
     esac
+    echo "=== Variante de scheduler seleccionada: $SCHED_VARIANT ==="
+
+    copy_scheduler $SCHED_VARIANT
     echo "=== Scheduler copiado a ./scheduler.py ==="
 }
 
@@ -156,6 +217,24 @@ show_cluster_info() {
 
     echo -e "\n=== Current pod metrics ==="
     kubectl top pods --all-namespaces || echo "No resources found"
+}
+
+# =============================================
+# Desplegar scheduler
+# =============================================
+deploy_scheduler() {
+    echo "=== Desplegando scheduler $SCHED_IMPL ==="            # Informamos qué variante de scheduler vamos a desplegar
+
+    kubectl delete deployment my-scheduler -n kube-system --ignore-not-found
+    # Eliminamos cualquier despliegue previo del scheduler para evitar conflictos
+    # --ignore-not-found evita error si no existía antes
+
+    kubectl apply -f $RBAC_SCHEDULER
+    # Aplicamos los manifiestos del scheduler (RBAC, ServiceAccount, Deployment, etc.)
+
+    kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
+    # Esperamos a que el Deployment se despliegue correctamente
+    # Esto asegura que el scheduler esté listo antes de ejecutar cualquier pod que dependa de él
 }
 
 # ========================
@@ -225,3 +304,4 @@ echo "Resultados JSON: ./$SCHED_IMPL/metrics/scheduler_metrics_*.json"
 
 
 echo "Resultados se guardarán en $RESULTS_FILE"
+

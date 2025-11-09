@@ -28,7 +28,7 @@ kubectl -n kube-system logs -l component=kube-scheduler
 ```
  2.  Schedule a simple pod:
 ```Bash
-kubectl run test --image=nginx --restart=Never
+kubectl run test --image=nginx --restart=Never 
 kubectl get pods -o wide
 ```
 
@@ -39,7 +39,7 @@ Describe the path:
 <p align="center">
 <img src="https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/img/fugura1-1.png" width="850">
   <br>
-  <em>Figure 1: Verification of the default scheduler and scheduling of a test Pod.</em>
+  <em>Figure 1: Verification of the default scheduler and scheduling of a test-nginx-pod Pod.</em>
 </p>
 
 ✅ **Descripción del flujo de scheduling en Kubernetes**
@@ -47,7 +47,7 @@ Describe the path:
 La **Figura 1** muestra la ejecución de los comandos utilizados para verificar que el scheduler por defecto está en funcionamiento y para observar cómo se programa un Pod sencillo dentro del clúster creado con Kind. A partir de los resultados obtenidos, podemos describir el funcionamiento interno del sistema cuando programamos un Pod:
 
 **a) Enviamos la orden de creación del Pod**  
-Ejecutamos `kubectl run test --image=nginx --restart=Never`, lo que provoca que el cliente `kubectl` envíe al API Server un objeto Pod para ser creado. En este momento, el Pod se registra pero aún no tiene un nodo asignado.
+Ejecutamos `kubectl run test-nginx-pod --image=nginx --restart=Never`, lo que provoca que el cliente `kubectl` envíe al API Server un objeto Pod para ser creado. En este momento, el Pod se registra pero aún no tiene un nodo asignado.
 
 **b) El Pod queda inicialmente en estado *Pending***  
 Tras su creación, el API Server almacena el Pod con `status=Pending`, ya que todavía no ha sido asociado a ningún nodo del clúster.
@@ -652,10 +652,10 @@ d) Revisamos:
 * Número de logs redundantes del scheduler polling: Cuántas veces el scheduler polling imprime “Pending”.
 
 ```Bash
-kubectl -n test-scheduler get pod test -o custom-olumns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
+kubectl -n test-scheduler get pod test-nginx-pod -o custom-olumns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
 ```
 ```Bash
-jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler$ kubectl -n test-scheduler get pod test -o custom-columns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler$ kubectl -n test-scheduler get pod test-nginx-pod -o custom-columns=TIME:.metadata.creationTimestamp,STATUS:.status.phase -w
 TIME                   STATUS
 2025-11-08T21:04:46Z   Running
 2025-11-08T21:04:46Z   Running
@@ -671,8 +671,8 @@ TIME                   STATUS
 * Cambios de estado Pending → Running:
   
 ```Bash
-creation=$(kubectl -n test-scheduler get pod test -o jsonpath='{.metadata.creationTimestamp}')
-start=$(kubectl -n test-scheduler get pod test -o jsonpath='{.status.startTime}')
+creation=$(kubectl -n test-scheduler get pod test-nginx-pod -o jsonpath='{.metadata.creationTimestamp}')
+start=$(kubectl -n test-scheduler get pod test-nginx-pod -o jsonpath='{.status.startTime}')
 echo "Tiempo total en segundos: $(( $(date -d "$start" +%s) - $(date -d "$creation" +%s) ))"
 ```
 

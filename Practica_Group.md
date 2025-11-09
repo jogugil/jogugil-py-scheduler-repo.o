@@ -459,6 +459,7 @@ spec:
       containers:
       - name: scheduler
         image: my-py-scheduler:latest
+        imagePullPolicy: Never
         args: ["--scheduler-name","my-scheduler"]
 
 ```

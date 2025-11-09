@@ -169,21 +169,13 @@ echo "=== Limpiando imágenes y contenedores locales ==="
 docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE" >/dev/null 2>&1 || true
 docker container prune -f
 
-# Crear clúster nuevo
-create_cluster
-
-# Construir y cargar imágenes CPU/RAM
-load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
-load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
-
-# ========================
 # Selección de variante de scheduler
-# ========================
 select_scheduler_variant "$1"
 
 # Copiar Dockerfile y requirements al directorio actual
 cp ../../Dockerfile ./Dockerfile
 cp ../../requirements.txt ./requirements.txt
+cp ../../rbac-deploy.yaml ./rbac-deploy.yaml
 
 # Limpiar imágenes locales y contenedores detenidos
 echo "=== Limpiando imágenes y contenedores locales ==="
@@ -204,7 +196,9 @@ load_image_to_cluster "$BASIC_IMAGE" "./test-basic"
 load_image_to_cluster "$NGINX_IMAGE" "./nginx-pod"
 load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
 load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
-
+# Construir y cargar imágenes CPU/RAM
+load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
+load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
 # Cargamos módulos de métricas
 install_metrics_server
 show_cluster_info
@@ -213,4 +207,21 @@ show_cluster_info
 show_cluster_info
 
 echo "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
+
+# Desplegamos el scheduler custom (watch o polling)
+deploy_scheduler
+
+# Ejecutar el script de benchmarking de pods
+# Podemos pasarle la variante de scheduler y el número de pods opcionalmente
+SCHED_IMPL=${SCHED_IMPL:-polling}  # la misma variante que usamos arriba
+NUM_PODS=${NUM_PODS:-20}           # por defecto 20 pods
+echo "=== LANZANDO TEST DE PODS EN PARALELO ==="
+./bechmarking/scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"
+
+# Una vez termine, los resultados ya estarán en $RESULTS_DIR y $RESULTS_JSON
+echo "=== TEST DE PODS FINALIZADO ==="
+echo "Resultados CSV: ./my-scheduler/metrics/results.csv"
+echo "Resultados JSON: ./$SCHED_IMPL/metrics/scheduler_metrics_*.json"
+
+
 echo "Resultados se guardarán en $RESULTS_FILE"

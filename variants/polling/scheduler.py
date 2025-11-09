@@ -34,7 +34,34 @@ def choose_node(api: client.CoreV1Api, pod) -> str:
     if not nodes:
         raise RuntimeError("No nodes available")
 
-    min_cnt = math.inf
+    min_cnt = math.inf    parser = argparse.ArgumentParser()
+    parser.add_argument("--scheduler-name", default="my-scheduler")
+    parser.add_argument("--kubeconfig", default=None)
+    parser.add_argument("--interval", type=float, default=2.0)
+    args = parser.parse_args()
+
+    api = load_client(args.kubeconfig)
+    print(f"[polling] scheduler starting… name={args.scheduler_name}")
+
+    while True:
+        pods = api.list_pod_for_all_namespaces(field_selector="spec.nodeName=").items
+        if pods:
+            print("[scheduler] LIST pods pending scheduling")
+            for pod in pods:
+                if pod.spec.scheduler_name != args.scheduler_name:
+                    continue
+                try:
+                    print(f"[scheduler] Attempting to schedule pod: {pod.metadata.namespace}/{pod.metadata.name}")
+
+                    node = choose_node(api, pod)
+
+                    bind_pod(api, pod, node)
+
+                except Exception as e:
+                    print(f"[scheduler] retry scheduling pod due to error: {e}")
+
+            time.sleep(args.interval)
+
     pick = nodes[0].metadata.name
     for n in nodes:
         cnt = sum(1 for p in pods if p.spec.node_name == n.metadata.name)
@@ -57,25 +84,23 @@ def main():
     print(f"[polling] scheduler starting… name={args.scheduler_name}")
 
     while True:
-        print("[scheduler] LIST pods pending scheduling")
         pods = api.list_pod_for_all_namespaces(field_selector="spec.nodeName=").items
+        if pods:
+            print("[scheduler] LIST pods pending scheduling")
+            for pod in pods:
+                if pod.spec.scheduler_name != args.scheduler_name:
+                    continue
+                try:
+                    print(f"[scheduler] Attempting to schedule pod: {pod.metadata.namespace}/{pod.metadata.name}")
 
-        for pod in pods:
-            if pod.spec.scheduler_name != args.scheduler_name:
-                continue
+                    node = choose_node(api, pod)
 
-            try:
-                print(f"[scheduler] Attempting to schedule pod: {pod.metadata.namespace}/
-{pod.metadata.name}")
+                    bind_pod(api, pod, node)
 
-                node = choose_node(api, pod)
+                except Exception as e:
+                    print(f"[scheduler] retry scheduling pod due to error: {e}")
 
-                bind_pod(api, pod, node)
-
-            except Exception as e:
-                print(f"[scheduler] retry scheduling pod due to error: {e}")
-
-        time.sleep(args.interval)
+            time.sleep(args.interval)
 
 if __name__ == "__main__":
     main()

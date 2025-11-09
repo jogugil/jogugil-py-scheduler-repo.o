@@ -10,14 +10,18 @@ def load_client(kubeconfig=None):
 
 def bind_pod(api: client.CoreV1Api, pod, node_name: str):
     print(f"[scheduler] Attempting bind: {pod.metadata.namespace}/{pod.metadata.name} ->
-{node_name}")
-    target = client.V1ObjectReference(kind="Node", name=node_name)
-    meta = client.V1ObjectMeta(name=pod.metadata.name)
-    body = client.V1Binding(target=target, metadata=meta)
-    api.create_namespaced_binding(pod.metadata.namespace, body)
+{node_name}")    
+    try:
+        target = client.V1ObjectReference(kind="Node", name=node_name)
+        meta = client.V1ObjectMeta(name=pod.metadata.name)
+        body = client.V1Binding(target=target, metadata=meta)
+        api.create_namespaced_binding(pod.metadata.namespace, body, _preload_content=False)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("ERROR DETALLADO:", repr(e))
     print(f"[scheduler] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}
-")
-
+")     
 def choose_node(api: client.CoreV1Api, pod) -> str:
     print(f"[scheduler] LIST nodes")
     nodes = api.list_node().items

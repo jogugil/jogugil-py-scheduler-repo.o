@@ -423,28 +423,57 @@ spec:
 **Manifiesto RBAC modificado para permitir acceso a Pods en `test-scheduler`:**  
 
 ```yaml
- # ServiceAccount sigue en kube-system
+  # ServiceAccount en kube-system
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: my-scheduler
   namespace: kube-system
 ---
-# ClusterRoleBinding existente para kube-system
+# ClusterRole con permisos COMPLETOS del scheduler
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: my-scheduler-clusterrole
+  labels:
+    app: my-scheduler
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/binding"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch", "update"]
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+# ClusterRoleBinding que une ClusterRole y ServiceAccount
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: my-scheduler-binding
+  name: my-scheduler-clusterrolebinding
+  labels:
+    app: my-scheduler
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:kube-scheduler
+  name: my-scheduler-clusterrole
 subjects:
 - kind: ServiceAccount
   name: my-scheduler
   namespace: kube-system
 ---
-# Role para dar permisos sobre Pods en test-scheduler
+# Role ESPECÍFICO para test-scheduler (opcional, para permisos adicionales)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -455,7 +484,7 @@ rules:
   resources: ["pods"]
   verbs: ["get", "list", "watch", "patch", "update"]
 ---
-# RoleBinding que une Role y ServiceAccount
+# RoleBinding para el Role específico
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -470,7 +499,7 @@ subjects:
   name: my-scheduler
   namespace: kube-system
 ---
-# Deployment del scheduler sigue en kube-system
+# Deployment del scheduler
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -479,17 +508,19 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: {app: my-scheduler}
+    matchLabels: 
+      app: my-scheduler
   template:
     metadata:
-      labels: {app: my-scheduler}
+      labels: 
+        app: my-scheduler
     spec:
       serviceAccountName: my-scheduler
       containers:
       - name: scheduler
         image: my-py-scheduler:latest
         imagePullPolicy: Never
-        args: ["--scheduler-name","my-scheduler"]
+        args: ["--scheduler-name", "my-scheduler"]
 
 ```
 

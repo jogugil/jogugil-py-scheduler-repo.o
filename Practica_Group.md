@@ -761,6 +761,8 @@ Interval: 2025-11-08T21:06:57Z -> 2025-11-08T21:06:58Z, duration approx: 1s
 
 En los pasos anteriores ya mostramos las capturas de pantalla y todos lso pasos realizados para el despliegue del scheduler personalizado (scheduler-polling) y la cpatura de las métricas. Para hacerlo automatizado creamos un script que permite crear el clsuter, lanzar el scheduler, los pods de pruebas y calcular las metricas de latencia y carga de nuestro scheduler. El script se meustra a continuación:
 
+- ***`metrics-polling.sh`***
+  
 ```Bash
 
 ```
@@ -772,83 +774,118 @@ Los resultados para este scheduler polling son:
 
 En este paso modificamos `my_scheduler`del cluster para que se ejecute la versión `watch`. Realizamos todos los pasos anteriores para cargar la imagen con mi nuevo `scheduler_watch` y calcular las nuevas métricas.
 
-Notar que para obtener las métricas de cada uno de los shceulers persoinalizamos hemos creado lso siguientes scripts.
+Ahora ya no listamos todos lso Pod's que tenemos, sino que creamos un watch por cad auno y cuando nos llega el evento asociado al Pod ejecutamos una acción determinada. El código del nmuevo scheduler es el siguiente:
 
-- ***`metrics-polling.sh`***
-```Bash
-#!/bin/bash
+```Python
+import argparse, math
+from kubernetes import client, config, watch
 
-SCHED_NS="kube-system"
-SCHED_LABEL="app=my-scheduler-polling"
-TEST_POD="test-metric-polling"
+import signal
+import sys
 
-echo "======================================================="
-echo " MÉTRICAS DEL SCHEDULER POLLING"
-echo "======================================================="
+# Flag global
+running = True
 
-echo "[1] Lanzamos Pod de prueba"
-T0=$(date +%s%3N)
-kubectl run $TEST_POD --image=nginx --restart=Never >/dev/null 2>&1
+# Handler para Ctrl+C o SIGTERM
+def signal_handler(sig, frame):
+    global running
+    print("[info] Señal de terminación recibida, deteniendo scheduler...")
+    running = False
 
-echo "[2] Esperamos a que se generen logs"
-sleep 2
+signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Kill desde Kubernetes
 
-echo "[3] Obtenemos logs del scheduler polling"
-kubectl -n $SCHED_NS logs -l $SCHED_LABEL --timestamps > polling.log
+# TODO: load_client(kubeconfig) -> CoreV1Api
+#  - Use config.load_incluster_config() by default, else config.load_kube_config()
+def load_client(kubeconfig=None):
+    """
+    Carga la configuración de Kubernetes.
+    Usa kubeconfig si se pasa como argumento,
+    o las credenciales del Pod si se ejecuta dentro del clúster.
+    """
+    try:
+        if kubeconfig:
+            print("[config] Cargando configuración desde kubeconfig local...")
+            config.load_kube_config(config_file=kubeconfig)
+        else:
+            print("[config] Cargando configuración dentro del clúster...")
+            config.load_incluster_config()
+    except Exception as e:
+        raise RuntimeError(f"Error al cargar configuración: {e}")
+    
+    return client.CoreV1Api()
+# TODO: bind_pod(api, pod, node_name)
+#  - Create a V1Binding with metadata.name=pod.name and target.kind=Node,target.name=node_name
+#  - Call api.create_namespaced_binding(namespace, body)
+def bind_pod(api, pod, node_name):
+    """
+    Crea un binding entre el Pod y el nodo elegido.
+    """
+    target = client.V1ObjectReference(api_version="v1", kind="Node", name=node_name)
+    metadata = client.V1ObjectMeta(name=pod.metadata.name)
+    body = client.V1Binding(target=target, metadata=metadata)
+    namespace = pod.metadata.namespace
 
-echo "[4] Calculamos latencia (t1 - t0)"
-TS_LINE=$(grep -m1 "Detected Pending Pod" polling.log | awk '{print $1}')
+    api.create_namespaced_binding(namespace=namespace, body=body)
+    print(f"[bind] Pod {namespace}/{pod.metadata.name} -> {node_name}")
+# TODO: choose_node(api, pod) -> str
+#  - List nodes and pick one based on a simple policy (fewest running pods)
+def choose_node(api, pod):
+    """
+    Selecciona el nodo con menos Pods asignados (política simple).
+    """
+    nodes = api.list_node().items
+    pods = api.list_pod_for_all_namespaces().items
+    node_load = {n.metadata.name: 0 for n in nodes}
 
-if [[ -z "$TS_LINE" ]]; then
-    echo "No se encontró 'Detected Pending Pod' en los logs del scheduler."
-else
-    # Convertir timestamp ISO8601 a epoch ms
-    T1=$(date -d "$TS_LINE" +%s%3N)
-    LATENCY=$((T1 - T0))
-    echo "t0 (inicio): $T0 ms"
-    echo "t1 (detección): $T1 ms"
-    echo "Latencia total: $LATENCY ms"
-fi
+    for p in pods:
+        if p.spec.node_name:
+            node_load[p.spec.node_name] += 1
 
-echo
-echo "[5] Número de peticiones LIST al API Server"
-LISTS=$(kubectl -n kube-system logs -l component=kube-apiserver | grep LIST | wc -l)
-echo "Peticiones LIST: $LISTS"
+    node = min(node_load, key=node_load.get)
+    print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
+    return node
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scheduler-name", default="my-scheduler")
+    parser.add_argument("--kubeconfig", default=None)
+    args = parser.parse_args()
 
-echo
-echo "[6] Consumo de CPU del scheduler polling"
-kubectl top pod -n $SCHED_NS | grep my-scheduler-polling || echo "top no disponible"
+    # TODO: api = load_client(args.kubeconfig)
 
-echo
-echo "[7] Eventos Kubernetes (Pending → Running)"
-kubectl get events --sort-by=.metadata.creationTimestamp > events.log
-grep $TEST_POD events.log
+    print(f"[watch] scheduler starting… name={args.scheduler_name}")
+    w = watch.Watch()
+    # Stream Pod events across all namespaces
+    print(f"[scheduler] Iniciando scheduler personalizado: {args.scheduler_name}")
+    
+    while running:
+      try:
+         for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
+           if not running:
+             break
+           pod = event['object']
+           if not pod or not hasattr(pod, 'spec'):
+              continue
+           if event['type'] not in ("ADDED", "MODIFIED"):
+              continue
+           if (pod.status.phase == "Pending" and
+                pod.spec.scheduler_name == args.scheduler_name and
+                not pod.spec.node_name):
+              print(f"[event] Pod pendiente detectado: {pod.metadata.namespace}/{pod.metadata.name}")
+              try:
+                node = choose_node(api, pod)
+                bind_pod(api, pod, node)
+                print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+              except Exception as e:
+                print(f"[error] Error al programar {pod.metadata.name}: {e}")
+      except Exception as e:
+         if running:
+           print(f"[warn] Watch detenido de forma limpia.")
 
-echo
-echo "[8] Logs redundantes del polling"
-REDUNDANT=$(grep -c "Checking pending pods" polling.log)
-echo "Iteraciones del bucle polling: $REDUNDANT"
-
-echo
-echo "[9] Número de detecciones del Pod"
-DETECTIONS=$(grep -c "Detected Pending Pod" polling.log)
-echo "Detecciones totales: $DETECTIONS"
-
-echo
-echo "[10] Estado final del Pod"
-STATE=$(kubectl get pod $TEST_POD -o jsonpath='{.status.phase}')
-echo "Estado: $STATE"
-
-echo
-echo "[11] Limpieza del Pod de prueba"
-kubectl delete pod $TEST_POD >/dev/null 2>&1
-echo "Limpieza completada"
-
-echo "======================================================="
-echo " FIN DEL SCRIPT POLLING"
-echo "======================================================="
+if __name__ == "__main__":
+    main()
 ```
-- ***`metrics-watch.sh`***
+Cómo en el apartado anterior, hemos creado un script que carga ydespleiga el scheduler-watch y calcula las metriucas asociadas al procesamiento de los pods de prueba. El script es el siguiente:
 
 ```Bash
 #!/bin/bash
@@ -919,11 +956,12 @@ echo " FIN DEL SCRIPT WATCH"
 echo "======================================================="
 ```
 
-  
-
-
 ### ✅**Checkpoint 4:**
 ***Compare responsiveness and efficiency between polling and watch approaches.***
+
+Comparamos los valores obteneidos por lso scripts para cad auno de los tipos de scheduler para los mismnos Pods de prueba. En un principio tenemos que ver que los valores para el scheduler de tipo watch son mejroes que para el tipo polling. 
+
+
 
 ## 🧩 Step 8 — Policy Extensions
 

@@ -1325,15 +1325,144 @@ if __name__ == "__main__":
 Ejecutamos el script creado en el apartado anterior y obtnemos los siguientes resultados par el despliegue de los mismos Pods:
 
 ```Bash
+=== TEST MÉTRICAS: test-pod ===
+TIMESTAMP INICIAL: 2025-11-09T14:00:29Z
+=== Contando operaciones LIST ANTES del scheduling ===
+Operaciones LIST ANTES: 0
+T0 (apply): 14:00:30 - 1762696830
+pod/test-pod created
+Pod test-pod aplicado
+pod/test-pod condition met
+Logs capturados durante test: 3 líneas
+Latencia scheduler: N/A segundos
+Latencia Pull→Start: 2
+CPU (avg): 1m - MEM (avg): 58Mi
+=== Contando operaciones LIST DESPUÉS del scheduling ===
+Operaciones LIST DESPUÉS: 3
+Operaciones LIST DURANTE scheduling: 3
+LIST Ops (scheduler): 3
+total_attempts: [0]
+successful_schedules: [0]
+total_attempts: 0
+successful_schedules): 0)
+Re-intentos implícitos (total - exitosos): 0
+Re-intentos explícitos: 1
+Re-intentos implícitos (total - exitosos): 0
+pod "test-pod" deleted from test-scheduler namespace
+Eventos de binding para test-pod: 00
+pod/test-pod created
+Pod test-pod aplicado
+pod/test-pod condition met
+Latencia Pending→Running: 0 s
+
+=== ANÁLISIS DETALLADO (USANDO MÉTRICAS): test_basic_detailed ===
+recent_schedules: [0]
+total_attempts: [0]
+successful_schedules: [0]
+  - Latencia Scheduling: N/As
+  - Latencia Pending→Running: 0s
+  - Latencia Pull→Start: 2s
+  - Re-intentos scheduler: 1
+  - Throughput: 0 pods/h
+  - Tasa de éxito: 0%
+  - CPU: 1m, Mem: 58Mi
+  - Operaciones LIST: 3
+  - Estado cluster: 1/1
+  - Eventos: 00
+  - Carga compuesta: N/A
+  - CARGA: NO DISPONIBLE
+
+
+=== TEST MÉTRICAS: test-nginx-pod===
+TIMESTAMP INICIAL: 2025-11-09T14:01:14Z
+=== Contando operaciones LIST ANTES del scheduling ===
+Operaciones LIST ANTES: 0
+T0 (apply): 14:01:14 - 1762696874
+pod/test-nginx-pod created
+Pod test-nginx-pod aplicado
+pod/test-nginx-pod condition met
+Logs capturados durante test: 3 líneas
+Latencia scheduler: N/A segundos
+Latencia Pull→Start: 3
+CPU (avg): 3m - MEM (avg): 58Mi
+=== Contando operaciones LIST DESPUÉS del scheduling ===
+Operaciones LIST DESPUÉS: 3
+Operaciones LIST DURANTE scheduling: 3
+LIST Ops (scheduler): 3
+total_attempts: [0]
+successful_schedules: [0]
+total_attempts: 0
+successful_schedules): 0)
+Re-intentos implícitos (total - exitosos): 0
+Re-intentos explícitos: 1
+Re-intentos implícitos (total - exitosos): 0
+pod "test-nginx-pod" deleted from test-scheduler namespace
+Eventos de binding para test-nginx-pod: 00
+pod/test-nginx-pod created
+Pod test-nginx-pod aplicado
+pod/test-nginx-pod condition met
+Latencia Pending→Running: 0 s
+
+=== ANÁLISIS DETALLADO (USANDO MÉTRICAS): test_nginx_detailed ===
+recent_schedules: [0]
+total_attempts: [0]
+successful_schedules: [0]
+  - Latencia Scheduling: N/As
+  - Latencia Pending→Running: 0s
+  - Latencia Pull→Start: 3s
+  - Re-intentos scheduler: 1
+  - Throughput: 0 pods/h
+  - Tasa de éxito: 0%
+  - CPU: 3m, Mem: 58Mi
+  - Operaciones LIST: 3
+  - Estado cluster: 1/1
+  - Eventos: 00
+  - Carga compuesta: N/A
+  - CARGA: NO DISPONIBLE
+
+=== RESUMEN FINAL ===
+Métricas guardadas en: scheduler_metrics_20251109_145826.csv
+
+=== COMPARATIVA FINAL (MÉTRICAS) ===
+Pod             | LatPolling(s) | LatPending->Run(s)   | LIST   | CPU      | Mem      | Pull->Start(s) | Retries    | Events   | Implicits_Retries
+----------------+--------------+----------------------+--------+----------+----------+----------------+------------+----------+-------------------
+test-pod        | N/A          | 0                    | 3      | 1m       | 58Mi     | 2              | 1          | 00       | 0
+test-nginx-pod  | N/A          | 0                    | 3      | 3m       | 58Mi     | 3              | 1          | 00       | 0
 
 ```
 
 ### ✅**Checkpoint 4:**
 ***Compare responsiveness and efficiency between polling and watch approaches.***
 
+Vemos en lso resultados de las métricas que la latencia es mínima en el caso del `scheduler-watch`de hecho la resolución es tan pequeña que es nula. Del mismo modo las operaciones sobnre APiserv(LIST) o inclso el uso de cpu es menor al tene menos peticiones al APISERV. 
+Aunque estas métricas no son representativas ya que se realzian con dos simples despliequesx de dos pods con carga baja. Aún así, se ve que la eficiencia del tipo `watch`es mayor a la del `polling`.
+
+
+```Bash
+
+=== RESUMEN FINAL: scheduler - polling ===
+Métricas guardadas en: scheduler_metrics_20251109_144130.csv
+
+=== COMPARATIVA FINAL (MÉTRICAS) ===
+Pod             | LatPolling(s) | LatPending->Run(s)   | LIST   | CPU      | Mem      | Pull->Start(s) | Retries    | Events   | Implicits_Retries
+----------------+--------------+----------------------+--------+----------+----------+----------------+------------+----------+-------------------
+test-pod        | 1.004270112  | 0                    | 5      | 315m     | 58Mi     | 2              | 00         | 1        | 0
+test-nginx-pod  | .589661990   | 0                    | 5      | 274m     | 59Mi     | 2              | 00         | 1        | 0
+
+=== RESUMEN FINAL : scheduler-watch ===
+Métricas guardadas en: scheduler_metrics_20251109_145826.csv
+
+=== COMPARATIVA FINAL (MÉTRICAS) ===
+Pod             | LatPolling(s) | LatPending->Run(s)   | LIST   | CPU      | Mem      | Pull->Start(s) | Retries    | Events   | Implicits_Retries
+----------------+--------------+----------------------+--------+----------+----------+----------------+------------+----------+-------------------
+test-pod        | N/A          | 0                    | 3      | 1m       | 58Mi     | 2              | 1          | 00       | 0
+test-nginx-pod  | N/A          | 0                    | 3      | 3m       | 58Mi     | 3              | 1          | 00       | 0
+
+```
+
 Comparamos los valores obteneidos por lso scripts para cad auno de los tipos de scheduler para los mismnos Pods de prueba. En un principio tenemos que ver que los valores para el scheduler de tipo watch son mejroes que para el tipo polling. 
 
-
+Para poder hacer una comparación más exhaustiva **se han creado unos scripts para lanzar Pods con mayor carga** y un **pequeño benchmarking** que despliega varios Pods, `calculando las métricas medias para cada tipo de scheduler` . Los scripts se encuentran en el subdirectorio `benchmarking`. 
 
 ## 🧩 Step 8 — Policy Extensions
 

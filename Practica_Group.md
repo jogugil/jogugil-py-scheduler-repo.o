@@ -686,7 +686,7 @@ echo "Tiempo total en segundos: $(( $(date -d "$start" +%s) - $(date -d "$creati
 Tambiém podemos verlo con los eventos que genera `my-scheduler` :
 
 ```Bash
-jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test-nginx-pod --sort-by=.metadata.creationTimestamp
 LAST SEEN   TYPE     REASON    OBJECT     MESSAGE
 11m         Normal   Pulling   pod/test   Pulling image "nginx"
 11m         Normal   Pulled    pod/test   Successfully pulled image "nginx" in 943ms (943ms including waiting). Image size: 59774010 bytes.
@@ -706,7 +706,7 @@ LAST SEEN   TYPE     REASON    OBJECT     MESSAGE
 Para obtenr la latencia de `my-scheduler` desde que detecta el Pod de nginx (`Pulling`) hasta que el Pod cambia a `Started`:
 
 ```Bash
-kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp \
+kubectl get events -n test-scheduler --field-selector involvedObject.name=test-nginx-pod --sort-by=.metadata.creationTimestamp \
 -o jsonpath='{range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}' | grep -E 'Pulling|Started' | awk '
 /Pulling/ {pull=$1; pull_time=$2}
 /Started/ {start=$1; start_time=$2; print "Interval: " pull " -> " start ", duration approx: " (mktime(gensub(/[-:T]/," ","g",start))-mktime(gensub(/[-:T]/," ","g",pull))) "s"}'
@@ -714,7 +714,7 @@ kubectl get events -n test-scheduler --field-selector involvedObject.name=test -
 El resultado de aplicar el comadno es:
 
 ```Bash
-jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test --sort-by=.metadata.creationTimestamp \
+jogugil@PHOSKI:~/kubernetes_ejemplos/scheduler/py-scheduler-repo.o/py-scheduler$ kubectl get events -n test-scheduler --field-selector involvedObject.name=test-nginx-pod --sort-by=.metadata.creationTimestamp \
 -o jsonpath='{range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}' | grep -E 'Pulling|Started' | awk '
 /Pulling/ {pull=$1; pull_time=$2}
 /Started/ {start=$1; start_time=$2; print "Interval: " pull " -> " start ", duration approx: " (mktime(gensub(/[-:T]/," ","g",start))-mktime(gensub(/[-:T]/," ","g",pull))) "s"}'

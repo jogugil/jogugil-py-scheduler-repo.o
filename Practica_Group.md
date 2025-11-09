@@ -971,6 +971,53 @@ nodes = [n for n in api.list_node().items
 if "env" in (n.metadata.labels or {}) and
 n.metadata.labels["env"] == "prod"]
 ```
+
+***Resolución:***
+Actualmente elegimos el nodo con menos Pods. Podemos mejorar considerando el tipo de Pod o label de aplicación:
+```python
+def choose_node(api, pod):
+    nodes = [n for n in api.list_node().items
+             if n.metadata.labels and n.metadata.labels.get("env") == "prod"
+             and is_node_compatible(n, pod)]
+
+    if not nodes:
+        raise RuntimeError("No hay nodos disponibles compatibles")
+
+    pods = api.list_pod_for_all_namespaces().items
+    node_load = {n.metadata.name: 0 for n in nodes}
+
+    # Contar solo Pods del mismo tipo/app para distribuirlos
+    pod_app_label = pod.metadata.labels.get("app") if pod.metadata.labels else None
+    for p in pods:
+        if p.spec.node_name in node_load:
+            if not pod_app_label or (p.metadata.labels and p.metadata.labels.get("app") == pod_app_label):
+                node_load[p.spec.node_name] += 1
+
+    node = min(node_load, key=node_load.get)
+    print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
+    return node
+```
+Pero ademñas debemos modificar los manifiestos de lso pods para que tengan los labels por los cuales se deben filtar. 
+
+- Para filtrar nodos por env=prod o para la política de spread (app=<nombre>), el Pod debe tener labels:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: test-scheduler
+  labels:
+    app: my-app    # Para la política de spread
+    env: prod      # Para filtrar nodos por entorno
+spec:
+  schedulerName: my-scheduler
+  containers:
+  - name: pause
+    image: registry.k8s.io/pause:3.9
+```
+--1232-- HAy que modificarlo y probar, sacar imagenes del filtrado o logs 
+
 2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes
 before scoring.
 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.

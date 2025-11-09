@@ -728,16 +728,483 @@ Interval: 2025-11-08T21:06:57Z -> 2025-11-08T21:06:58Z, duration approx: 1s
 ***Your scheduler should log a message like:***
     - Bound default/test-pod -> kind-control-plane
 
-En los pasos anteriores ya mostramos las capturas de pantalla y todos lso pasos realizados para el despliegue del scheduler personalizado (scheduler-polling) y la cpatura de las métricas. Para hacerlo automatizado creamos un script que permite crear el clsuter, lanzar el scheduler, los pods de pruebas y calcular las metricas de latencia y carga de nuestro scheduler. El script se meustra a continuación:
+En los pasos anteriores ya mostramos las capturas de pantalla y todos las acciones realizados para el despliegue del scheduler personalizado (scheduler-polling) y la cpatura de las métricas. En ekl vinmos como el cheduiler-polling asigna un nodo al Pod `test-pod` cuando éste es desplegado dentro del clúster. 
 
-- ***`metrics-polling.sh`***
+Para hacerlo automatizado creamos un script que permite crear el clúster, lanzar el scheduler, los pods de pruebas y calcular las metricas de latencia y carga de nuestro scheduler. LAs funciones que calculan las métricas se meustra a continuación:
+
+- ***`scheduler-test.sh`***
   
 ```Bash
+# Función para test de latencia manual
+run_improved_latency_test() {
+    local pod_name=$1
+    local yaml_file=$2
+    local test_name=$3
 
+    echo ""
+    echo "=== TEST MÉTRICAS: $test_name ==="
+
+    # Limpiar pod previo
+    kubectl delete pod $pod_name -n $NAMESPACE --ignore-not-found=true
+    sleep 3
+
+    # Obtener el pod del scheduler
+    local scheduler_pod=$(kubectl -n kube-system get pods -l app=$SCHEDULER_NAME -o name 2>/dev/null | head -1 | sed 's#pod/##')
+
+    # TIMESTAMP INICIAL en formato ISO para --since-time
+    local start_timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "TIMESTAMP INICIAL: $start_timestamp"
+
+    local list_before=0
+    if [[ -n "$scheduler_pod" ]]; then
+        echo "=== Contando operaciones LIST ANTES del scheduling ==="
+        # Método 1: Buscar operaciones de listado en logs recientes
+        list_before=$(kubectl -n kube-system logs "$scheduler_pod" --since=1m | grep $pod_name 2>/dev/null | \
+           grep -c -E "list.*pods|List.*pods|get.*pods|Get.*pods|watching|Watching" 2>/dev/null || echo "0")
+
+        # LIMPIAR el valor
+        list_before=$(echo "$list_before" | tr -d '\n' | tr -d ' ' | tr -d '\r')
+        [[ -z "$list_before" ]] && list_before=0
+
+        # Método 2: Si es 0, contar líneas totales recientes como estimación
+        if [[ "$list_before" -eq "0" ]]; then
+            list_before=$(kubectl -n kube-system logs "$scheduler_pod" --since=1m | grep $pod_name 2>/dev/null | wc -l 2>/dev/null || echo "0")
+            list_before=$(echo "$list_before" | tr -d '\n' | tr -d ' ' | tr -d '\r')
+            [[ -z "$list_before" ]] && list_before=0
+        fi
+    fi
+    echo "Operaciones LIST ANTES: $list_before"
+
+    # Registrar tiempo inicial
+    local t0_sec=$(date -u +%s)
+    echo "T0 (apply): $(date -u +"%H:%M:%S") - $t0_sec"
+
+    kubectl apply -f $yaml_file -n $NAMESPACE
+    echo "Pod $pod_name aplicado"
+
+    # Esperar a que el pod esté listo
+    kubectl wait --for=condition=Ready pod/$pod_name -n $NAMESPACE --timeout=120s
+
+    # Pequeña pausa para logs
+    sleep 5
+
+    # OBTENER LOGS SOLO DESDE EL INICIO DEL TEST
+    local test_logs=""
+    if [[ -n "$scheduler_pod" ]]; then
+        test_logs=$(kubectl -n kube-system logs "$scheduler_pod" --since-time="$start_timestamp" 2>/dev/null || echo "")
+        echo "Logs capturados durante test: $(echo "$test_logs" | wc -l) líneas"
+    fi
+
+    # 2. Latencia del scheduler - BUSCAR EN LOGS DEL TEST
+    # Obtener timestamp del último binding
+    local t1_ts=$(kubectl -n kube-system logs -l app=$SCHEDULER_NAME --timestamps 2>/dev/null | \
+               grep "Bound $NAMESPACE/$pod_name" | tail -1 | awk '{print $1}')
+
+    local scheduler_latency="N/A"
+    if [[ -n "$t1_ts" ]]; then
+        # Convertir el timestamp ISO 8601 directamente a epoch con nanosegundos
+        local t1_epoch=$(date -u -d "$t1_ts" +%s.%N 2>/dev/null || echo "0")
+        if [[ $(echo "$t1_epoch > 0" | bc -l) -eq 1 ]]; then
+            # Calcular latencia como decimal
+            scheduler_latency=$(echo "$t1_epoch - $t0_sec" | bc -l)
+        fi
+    fi
+    echo "Latencia scheduler: $scheduler_latency segundos"
+
+
+    # 4. Latencia Pull->Start
+    local pull_start_latency=$(get_pull_start_latency "$pod_name" "$NAMESPACE")
+    echo "Latencia Pull→Start: $pull_start_latency"
+
+    # 5. Métricas de recursos
+    read -r avg_cpu avg_mem <<< "$(get_scheduler_resources_avg)"
+    echo "CPU (avg): $avg_cpu - MEM (avg): $avg_mem"
+
+  # 6. CONTAR OPERACIONES LIST DESPUÉS del scheduling y CALCULAR DIFERENCIA
+    local list_after=0
+    local list_ops=0
+
+    if [[ -n "$scheduler_pod" ]]; then
+        echo "=== Contando operaciones LIST DESPUÉS del scheduling ==="
+        # Esperar un poco para que se registren todos los logs
+        sleep 2
+
+        # Contar operaciones DESPUÉS del scheduling.  --since=1m para obtener sólo los últimos
+        list_after=$(kubectl -n kube-system logs "$scheduler_pod" --since=1m | grep $pod_name 2>/dev/null | \
+        grep -c -E "list.*pods|List.*pods|get.*pods|Get.*pods|watching|Watching" 2>/dev/null || echo "0")
+
+        # LIMPIAR el valor - eliminar saltos de línea y espacios
+        list_after=$(echo "$list_after" | tr -d '\n' | tr -d ' ' | tr -d '\r')
+
+        # Si está vacío, poner 0
+        if [[ -z "$list_after" ]]; then
+            list_after=0
+        fi
+
+        # Si sigue siendo 0, contar líneas totales recientes como estimación
+        if [[ "$list_after" -eq "0" ]]; then
+            list_after=$(kubectl -n kube-system logs "$scheduler_pod" --since=1m | grep $pod_name 2>/dev/null | wc -l 2>/dev/null || echo "0")
+            list_after=$(echo "$list_after" | tr -d '\n' | tr -d ' ' | tr -d '\r')
+            [[ -z "$list_after" ]] && list_after=0
+        fi
+
+        # Calcular diferencia (las operaciones durante el scheduling)
+        list_ops=$((list_after - list_before))
+
+        # Asegurar que no sea negativo
+        if [[ $list_ops -lt 0 ]]; then
+            list_ops=0
+        fi
+        echo "Operaciones LIST DESPUÉS: $list_after"
+        echo "Operaciones LIST DURANTE scheduling: $list_ops"
+    else
+        echo "No se pudo encontrar el pod del scheduler para contar operaciones LIST"
+    fi
+
+    echo "LIST Ops (scheduler): $list_ops"
+
+    # 7. Número de re-intentos del scheduler
+    local implicit_retries=0
+    local retry_count=0
+    if [[ -n "$scheduler_pod" ]]; then
+        # a. Total de intentos de scheduling
+        # Obtener y limpiar total_attempts
+        total_attempts=$(kubectl -n kube-system logs "$scheduler_pod" --since=1h 2>/dev/null | \
+             grep -c "Attempting to schedule pod: $NAMESPACE/$POD_NAME" || echo "0")
+
+        total_attempts=$(clean_numeric_value "$total_attempts")
+
+        # b. Obtener y limpiar successful_schedules
+        successful_schedules=$(kubectl -n kube-system logs "$scheduler_pod" --since=1h 2>/dev/null | \
+              grep -c "Bound $NAMESPACE/$POD_NAME" || echo "0")
+        successful_schedules=$(clean_numeric_value "$successful_schedules")
+
+        echo "total_attempts: [$total_attempts]"
+        echo "successful_schedules: [$successful_schedules]"
+
+        # c. Calcular reintentos
+        retry_count=$(kubectl -n kube-system logs "$scheduler_pod" | grep $pod_name 2>/dev/null | \
+            grep -c "retry\|Retry\|retrying\|error\|Error" || echo "0")
+        # Limpiar cualquier salto de línea
+        retry_count=$(echo "$retry_count" | tr -d '\n' | tr -d ' ')
+
+        # Reintentos implícitos: intentos - éxitos
+        echo "total_attempts: $total_attempts"
+        echo "successful_schedules): $successful_schedules)"
+        implicit_retries=$((total_attempts - successful_schedules))
+        echo "Re-intentos implícitos (total - exitosos): $implicit_retries"
+     fi
+     echo "Re-intentos explícitos: $retry_count"
+     echo "Re-intentos implícitos (total - exitosos): $implicit_retries"
+
+    # 8. Eventos de binding
+    local scheduler_events=0
+    # Limpiar pod previo
+    kubectl delete pod $pod_name -n $NAMESPACE --ignore-not-found=true
+    sleep 3
+
+    if [[ -n "$scheduler_pod" ]]; then
+        scheduler_events=$(kubectl -n kube-system logs "$scheduler_pod" | grep $pod_name 2>/dev/null | \
+            grep -c "Bound.*$pod_name\|Scheduled.*$pod_name" || echo "0")
+        scheduler_events=$(echo "$scheduler_events" | tr -d '\n' | tr -d ' ')
+    fi
+
+    echo "Eventos de binding para $pod_name: $scheduler_events"
+
+    # 3. Latencia Pending -> Running. Lo pasamos aqui para forzar la  métrica. Volvemos a borrar el Pod y crearlo deneuvo
+    # para modificar los cambios de estado y ver el tiempo que le cuesta llegar a running
+
+    # Limpiar pod previo
+    kubectl delete pod $pod_name -n $NAMESPACE --ignore-not-found=true
+    sleep 3
+    # Volvems a arrancar el Pod para cambiar el estado
+    kubectl apply -f $yaml_file -n $NAMESPACE
+    echo "Pod $pod_name aplicado"
+
+    # Esperar a que el pod esté listo
+    kubectl wait --for=condition=Ready pod/$pod_name -n $NAMESPACE --timeout=120s
+
+    # Pequeña pausa para logs
+    sleep 5
+    # Notar que lso sleeps no afectan al Pod. En neustro caso es 0 porque  los Pods no tienen mucha carga y el estado a running es rápido
+    local creation_time=$(kubectl -n $NAMESPACE get pod $pod_name -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)
+    local start_time=$(kubectl -n $NAMESPACE get pod $pod_name -o jsonpath='{.status.startTime}' 2>/dev/null)
+
+    local latency_pending_running="N/A"
+    if [[ -n "$creation_time" && -n "$start_time" ]]; then
+        local creation_sec=$(date -d "$creation_time" +%s 2>/dev/null)
+        local start_sec=$(date -d "$start_time" +%s 2>/dev/null)
+        if [[ $creation_sec -gt 0 && $start_sec -gt 0 ]]; then
+            latency_pending_running=$((start_sec - creation_sec))
+        fi
+    fi
+    echo "Latencia Pending→Running: $latency_pending_running s"
+
+
+
+    # Guardar métricas
+    if [[ "$pod_name" == "test-pod" ]]; then
+        METRICS_TEST_POD["latency"]=$scheduler_latency
+        METRICS_TEST_POD["latency_pending_running"]=$latency_pending_running
+        METRICS_TEST_POD["list_ops"]=$list_ops
+        METRICS_TEST_POD["cpu"]=$avg_cpu
+        METRICS_TEST_POD["mem"]=$avg_mem
+        METRICS_TEST_POD["pull_start_latency"]=$pull_start_latency
+        METRICS_TEST_POD["retries"]=$retry_count
+        METRICS_TEST_POD["implicit_retries"]=$implicit_retries
+        METRICS_TEST_POD["events"]=$scheduler_events
+    else
+        METRICS_NGINX_POD["latency"]=$scheduler_latency
+        METRICS_NGINX_POD["latency_pending_running"]=$latency_pending_running
+        METRICS_NGINX_POD["list_ops"]=$list_ops
+        METRICS_NGINX_POD["cpu"]=$avg_cpu
+        METRICS_NGINX_POD["mem"]=$avg_mem
+        METRICS_NGINX_POD["pull_start_latency"]=$pull_start_latency
+        METRICS_NGINX_POD["retries"]=$retry_count
+        METRICS_NGINX_POD["implicit_retries"]=$implicit_retries
+        METRICS_NGINX_POD["events"]=$scheduler_events
+    fi
+
+    return 0
+}
+
+# Función para análisis detallado de scheduling QUE USA LAS MÉTRICAS DE run_improved_latency_test
+analyze_scheduling_detailed() {
+    local pod_name=$1
+    local namespace=$2
+    local test_name=$3
+    # Obtener el pod del scheduler
+    local scheduler_pod=$(kubectl -n kube-system get pods -l app=$SCHEDULER_NAME -o name 2>/dev/null | head -1 | sed 's#pod/##')
+
+    echo ""
+    echo "=== ANÁLISIS DETALLADO (USANDO MÉTRICAS): $test_name ==="
+
+    # Obtener métricas de los arrays globales
+    local scheduling_latency="N/A"
+    local pending_running_latency="N/A"
+    local pull_start_latency="N/A"
+    local cpu_usage="N/A"
+    local mem_usage="N/A"
+    local list_ops="N/A"
+    local retry_count="N/A"
+
+    if [[ "$pod_name" == "test-pod" ]]; then
+        scheduling_latency=${METRICS_TEST_POD["latency"]}
+        pending_running_latency=${METRICS_TEST_POD["latency_pending_running"]}
+        pull_start_latency=${METRICS_TEST_POD["pull_start_latency"]}
+        cpu_usage=${METRICS_TEST_POD["cpu"]}
+        mem_usage=${METRICS_TEST_POD["mem"]}
+        list_ops=${METRICS_TEST_POD["list_ops"]}
+        retry_count=${METRICS_TEST_POD["retries"]}
+        events=${METRICS_TEST_POD["events"]}
+    else
+        scheduling_latency=${METRICS_NGINX_POD["latency"]}
+        pending_running_latency=${METRICS_NGINX_POD["latency_pending_running"]}
+        pull_start_latency=${METRICS_NGINX_POD["pull_start_latency"]}
+        cpu_usage=${METRICS_NGINX_POD["cpu"]}
+        mem_usage=${METRICS_NGINX_POD["mem"]}
+        list_ops=${METRICS_NGINX_POD["list_ops"]}
+        retry_count=${METRICS_NGINX_POD["retries"]}
+        events=${METRICS_NGINX_POD["events"]}
+    fi
+
+    # Throughput reciente
+    local recent_schedules=$(kubectl -n kube-system logs -l app=$SCHEDULER_NAME --since=5m 2>/dev/null \
+                              | grep "$pod_name" \
+                              | grep -c "Bound")
+
+    # Si recent_schedules está vacío, usar 0
+    recent_schedules=${recent_schedules:-0}
+
+    echo "recent_schedules: [$recent_schedules]"
+
+    local throughput=$((recent_schedules * 12))  # pods por hora
+
+    # Tasa de éxito
+
+    local total_attempts=0
+    local successful_schedules=0
+    local success_rate="N/A"
+
+    # Obtener y limpiar total_attempts
+    total_attempts=$(kubectl -n kube-system logs "$scheduler_pod" --since=1h 2>/dev/null | \
+        grep -c "Attempting to schedule pod: $NAMESPACE/$POD_NAME" || echo "0")
+
+    total_attempts=$(clean_numeric_value "$total_attempts")
+
+    # Obtener y limpiar successful_schedules
+    successful_schedules=$(kubectl -n kube-system logs "$scheduler_pod" --since=1h 2>/dev/null | \
+        grep -c "Bound $NAMESPACE/$POD_NAME" || echo "0")
+    successful_schedules=$(clean_numeric_value "$successful_schedules")
+
+    echo "total_attempts: [$total_attempts]"
+    echo "successful_schedules: [$successful_schedules]"
+
+    if [[ $total_attempts -gt 0 ]]; then
+        # Usar awk para evitar problemas con bc
+        success_rate=$(awk "BEGIN {printf \"%.2f\", $successful_schedules * 100 / $total_attempts}" 2>/dev/null || echo "0")
+    else
+        success_rate="0"
+    fi
+
+
+    # Estado del cluster
+    local cluster_state=$(get_cluster_state)
+
+
+    # Carga compuesta (solo si tenemos latencia numérica)
+    local composite_load="N/A"
+    if [[ "$scheduling_latency" =~ ^[0-9]+$ ]]; then
+        composite_load=$(calculate_composite_metrics "$scheduling_latency" "$cpu_usage" "$mem_usage" "$success_rate")
+    fi
+
+    # Mostrar resultados
+    echo "  - Latencia Scheduling: ${scheduling_latency}s"
+    echo "  - Latencia Pending→Running: ${pending_running_latency}s"
+    echo "  - Latencia Pull→Start: ${pull_start_latency}s"
+    echo "  - Re-intentos scheduler: $retry_count"
+    echo "  - Throughput: $throughput pods/h"
+    echo "  - Tasa de éxito: ${success_rate}%"
+    echo "  - CPU: $cpu_usage, Mem: $mem_usage"
+    echo "  - Operaciones LIST: $list_ops"
+    echo "  - Estado cluster: $cluster_state"
+    echo "  - Eventos: $events"
+
+    # Solo mostrar carga compuesta si es numérica
+    if [[ "$composite_load" != "N/A" ]]; then
+        echo "  - Carga compuesta: $composite_load/100"
+
+        # Interpretación de carga (CORREGIDO - sin error de "too many arguments")
+        if [[ "$composite_load" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+            if (( $(echo "$composite_load < 30" | bc -l 2>/dev/null) )); then
+                echo "  - CARGA: BAJA ✅"
+            elif (( $(echo "$composite_load < 70" | bc -l 2>/dev/null) )); then
+                echo "  - CARGA: MODERADA ⚠️"
+            else
+                echo "  - CARGA: ALTA ❌"
+            fi
+        else
+            echo "  - CARGA: NO DISPONIBLE"
+        fi
+    else
+        echo "  - Carga compuesta: N/A"
+        echo "  - CARGA: NO DISPONIBLE"
+    fi
+
+    # Registrar métricas en CSV
+    record_metrics "$test_name" "$pod_name" "$scheduling_latency" "N/A" "N/A" "$pending_running_latency" \
+                   "$pull_start_latency" "$cpu_usage" "$mem_usage" "$list_ops" "$success_rate" "$composite_load" "$cluster_state"
+}
 ```
+
+Estas funciones se encuntran dentro del script [***`scheduler-test.sh`***](py-scheduler/scheduler-test.sh)
 
 Los resultados para este scheduler polling son:
 
+ ```Bash
+=== TEST MÉTRICAS: test-pod ===
+TIMESTAMP INICIAL: 2025-11-09T13:43:38Z
+=== Contando operaciones LIST ANTES del scheduling ===
+Operaciones LIST ANTES: 0
+T0 (apply): 13:43:38 - 1762695818
+pod/test-pod created
+Pod test-pod aplicado
+pod/test-pod condition met
+Logs capturados durante test: 9 líneas
+Latencia scheduler: 1.004270112 segundos
+Latencia Pull→Start: 2
+CPU (avg): 315m - MEM (avg): 58Mi
+=== Contando operaciones LIST DESPUÉS del scheduling ===
+Operaciones LIST DESPUÉS: 5
+Operaciones LIST DURANTE scheduling: 5
+LIST Ops (scheduler): 5
+total_attempts: [1]
+successful_schedules: [1]
+total_attempts: 1
+successful_schedules): 1)
+Re-intentos implícitos (total - exitosos): 0
+Re-intentos explícitos: 00
+Re-intentos implícitos (total - exitosos): 0
+pod "test-pod" deleted from test-scheduler namespace
+Eventos de binding para test-pod: 1
+pod/test-pod created
+Pod test-pod aplicado
+pod/test-pod condition met
+Latencia Pending→Running: 0 s
+
+=== ANÁLISIS DETALLADO (USANDO MÉTRICAS): test_basic_detailed ===
+recent_schedules: [2]
+total_attempts: [2]
+successful_schedules: [2]
+  - Latencia Scheduling: 1.004270112s
+  - Latencia Pending→Running: 0s
+  - Latencia Pull→Start: 2s
+  - Re-intentos scheduler: 00
+  - Throughput: 24 pods/h
+  - Tasa de éxito: 100.00%
+  - CPU: 315m, Mem: 58Mi
+  - Operaciones LIST: 5
+  - Estado cluster: 1/1
+  - Eventos: 1
+  - Carga compuesta: N/A
+  - CARGA: NO DISPONIBLE
+
+=== TEST MÉTRICAS: test-nginx-pod ===
+TIMESTAMP INICIAL: 2025-11-09T13:44:26Z
+=== Contando operaciones LIST ANTES del scheduling ===
+Operaciones LIST ANTES: 0
+T0 (apply): 13:44:27 - 1762695867
+pod/test-nginx-pod created
+Pod test-nginx-pod aplicado
+pod/test-nginx-pod condition met
+Logs capturados durante test: 9 líneas
+Latencia scheduler: .589661990 segundos
+Latencia Pull→Start: 2
+CPU (avg): 274m - MEM (avg): 59Mi
+=== Contando operaciones LIST DESPUÉS del scheduling ===
+Operaciones LIST DESPUÉS: 5
+Operaciones LIST DURANTE scheduling: 5
+LIST Ops (scheduler): 5
+total_attempts: [2]
+successful_schedules: [2]
+total_attempts: 2
+successful_schedules): 2)
+Re-intentos implícitos (total - exitosos): 0
+Re-intentos explícitos: 00
+Re-intentos implícitos (total - exitosos): 0
+pod "test-nginx-pod" deleted from test-scheduler namespace
+Eventos de binding para test-nginx-pod: 1
+pod/test-nginx-pod created
+Pod test-nginx-pod aplicado
+pod/test-nginx-pod condition met
+Latencia Pending→Running: 0 s
+
+=== ANÁLISIS DETALLADO (USANDO MÉTRICAS): test_nginx_detailed ===
+recent_schedules: [2]
+total_attempts: [2]
+successful_schedules: [2]
+  - Latencia Scheduling: .589661990s
+  - Latencia Pending→Running: 0s
+  - Latencia Pull→Start: 2s
+  - Re-intentos scheduler: 00
+  - Throughput: 24 pods/h
+  - Tasa de éxito: 100.00%
+  - CPU: 274m, Mem: 59Mi
+  - Operaciones LIST: 5
+  - Estado cluster: 1/1
+  - Eventos: 1
+  - Carga compuesta: N/A
+  - CARGA: NO DISPONIBLE
+
+=== RESUMEN FINAL ===
+Métricas guardadas en: scheduler_metrics_20251109_144130.csv
+
+=== COMPARATIVA FINAL (MÉTRICAS) ===
+Pod             | LatPolling(s) | LatPending->Run(s)   | LIST   | CPU      | Mem      | Pull->Start(s) | Retries    | Events   | Implicits_Retries
+----------------+--------------+----------------------+--------+----------+----------+----------------+------------+----------+-------------------
+test-pod        | 1.004270112  | 0                    | 5      | 315m     | 58Mi     | 2              | 00         | 1        | 0
+test-nginx-pod  | .589661990   | 0                    | 5      | 274m     | 59Mi     | 2              | 00         | 1        | 0
+```
 
 ## 🧩 Step 7 — Event-Driven Scheduler (Watch API)
 
@@ -746,13 +1213,12 @@ En este paso modificamos `my_scheduler`del cluster para que se ejecute la versi�
 Ahora ya no listamos todos lso Pod's que tenemos, sino que creamos un watch por cad auno y cuando nos llega el evento asociado al Pod ejecutamos una acción determinada. El código del nmuevo scheduler es el siguiente:
 
 ```Python
-import argparse, math
+import argparse, time, math
 from kubernetes import client, config, watch
 
 import signal
 import sys
 
-# Flag global
 running = True
 
 # Handler para Ctrl+C o SIGTERM
@@ -761,17 +1227,11 @@ def signal_handler(sig, frame):
     print("[info] Señal de terminación recibida, deteniendo scheduler...")
     running = False
 
-signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
-signal.signal(signal.SIGTERM, signal_handler)  # Kill desde Kubernetes
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
-# TODO: load_client(kubeconfig) -> CoreV1Api
-#  - Use config.load_incluster_config() by default, else config.load_kube_config()
+# Cargar cliente
 def load_client(kubeconfig=None):
-    """
-    Carga la configuración de Kubernetes.
-    Usa kubeconfig si se pasa como argumento,
-    o las credenciales del Pod si se ejecuta dentro del clúster.
-    """
     try:
         if kubeconfig:
             print("[config] Cargando configuración desde kubeconfig local...")
@@ -781,148 +1241,91 @@ def load_client(kubeconfig=None):
             config.load_incluster_config()
     except Exception as e:
         raise RuntimeError(f"Error al cargar configuración: {e}")
-    
     return client.CoreV1Api()
-# TODO: bind_pod(api, pod, node_name)
-#  - Create a V1Binding with metadata.name=pod.name and target.kind=Node,target.name=node_name
-#  - Call api.create_namespaced_binding(namespace, body)
+
+# Bind de pod a nodo
 def bind_pod(api, pod, node_name):
-    """
-    Crea un binding entre el Pod y el nodo elegido.
-    """
     target = client.V1ObjectReference(api_version="v1", kind="Node", name=node_name)
     metadata = client.V1ObjectMeta(name=pod.metadata.name)
     body = client.V1Binding(target=target, metadata=metadata)
-    namespace = pod.metadata.namespace
+    api.create_namespaced_binding(namespace=pod.metadata.namespace, body=body)
+    print(f"[bind] Pod {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
 
-    api.create_namespaced_binding(namespace=namespace, body=body)
-    print(f"[bind] Pod {namespace}/{pod.metadata.name} -> {node_name}")
-# TODO: choose_node(api, pod) -> str
-#  - List nodes and pick one based on a simple policy (fewest running pods)
+# Elegir nodo según menos carga
 def choose_node(api, pod):
-    """
-    Selecciona el nodo con menos Pods asignados (política simple).
-    """
     nodes = api.list_node().items
     pods = api.list_pod_for_all_namespaces().items
     node_load = {n.metadata.name: 0 for n in nodes}
-
     for p in pods:
         if p.spec.node_name:
             node_load[p.spec.node_name] += 1
-
     node = min(node_load, key=node_load.get)
     print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
     return node
+
+# Diccionario global para métricas
+METRICS = {}
+
+def record_trace(pod, event_type, timestamp=None):
+    ts = timestamp or time.time()
+    key = f"{pod.metadata.namespace}/{pod.metadata.name}"
+    if key not in METRICS:
+        METRICS[key] = {"added": None, "scheduled": None, "bound": None}
+    if event_type == "ADDED":
+        METRICS[key]["added"] = ts
+        print(f"[trace] {key} ADDED at {ts}")
+    elif event_type == "SCHEDULED":
+        METRICS[key]["scheduled"] = ts
+        print(f"[trace] {key} SCHEDULED at {ts}")
+    elif event_type == "BOUND":
+        METRICS[key]["bound"] = ts
+        print(f"[trace] {key} BOUND at {ts}")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scheduler-name", default="my-scheduler")
     parser.add_argument("--kubeconfig", default=None)
     args = parser.parse_args()
 
-    # TODO: api = load_client(args.kubeconfig)
-
+    api = load_client(args.kubeconfig)
     print(f"[watch] scheduler starting… name={args.scheduler_name}")
+
     w = watch.Watch()
-    # Stream Pod events across all namespaces
-    print(f"[scheduler] Iniciando scheduler personalizado: {args.scheduler_name}")
-    
     while running:
-      try:
-         for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
-           if not running:
-             break
-           pod = event['object']
-           if not pod or not hasattr(pod, 'spec'):
-              continue
-           if event['type'] not in ("ADDED", "MODIFIED"):
-              continue
-           if (pod.status.phase == "Pending" and
-                pod.spec.scheduler_name == args.scheduler_name and
-                not pod.spec.node_name):
-              print(f"[event] Pod pendiente detectado: {pod.metadata.namespace}/{pod.metadata.name}")
-              try:
-                node = choose_node(api, pod)
-                bind_pod(api, pod, node)
-                print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
-              except Exception as e:
-                print(f"[error] Error al programar {pod.metadata.name}: {e}")
-      except Exception as e:
-         if running:
-           print(f"[warn] Watch detenido de forma limpia.")
+        try:
+            for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
+                if not running:
+                    break
+                pod = event['object']
+                if not pod or not hasattr(pod, 'spec'):
+                    continue
+                if event['type'] not in ("ADDED", "MODIFIED"):
+                    continue
+
+                # Detectar pod pendiente y scheduler custom
+                if (pod.status.phase == "Pending" and
+                    pod.spec.scheduler_name == args.scheduler_name and
+                    not pod.spec.node_name):
+                    
+                    record_trace(pod, "ADDED")
+                    try:
+                        node = choose_node(api, pod)
+                        bind_pod(api, pod, node)
+                        record_trace(pod, "BOUND")
+                        print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+                    except Exception as e:
+                        print(f"[error] Error al programar {pod.metadata.name}: {e}")
+        except Exception as e:
+            if running:
+                print(f"[warn] Watch detenido de forma limpia: {e}")
 
 if __name__ == "__main__":
     main()
 ```
-Cómo en el apartado anterior, hemos creado un script que carga ydespleiga el scheduler-watch y calcula las metriucas asociadas al procesamiento de los pods de prueba. El script es el siguiente:
+Ejecutamos el script creado en el apartado anterior y obtnemos los siguientes resultados par el despliegue de los mismos Pods:
 
 ```Bash
-#!/bin/bash
 
-SCHED_NS="kube-system"
-SCHED_LABEL="app=my-scheduler-watch"
-TEST_POD="test-metric-watch"
-
-echo "======================================================="
-echo " MÉTRICAS DEL SCHEDULER WATCH"
-echo "======================================================="
-
-echo "[1] Lanzamos Pod de prueba"
-T0=$(date +%s%3N)
-kubectl run $TEST_POD --image=nginx --restart=Never >/dev/null 2>&1
-
-echo "[2] Esperamos a que se generen eventos"
-sleep 1
-
-echo "[3] Obtenemos logs del scheduler watch"
-kubectl -n $SCHED_NS logs -l $SCHED_LABEL --timestamps > watch.log
-
-echo "[4] Calculamos latencia (primer evento)"
-TS_LINE=$(grep -m1 "Pod added" watch.log | awk '{print $1}')
-
-if [[ -z "$TS_LINE" ]]; then
-    echo "No se encontró 'Pod added' en los logs del scheduler watch."
-else
-    T1=$(date -d "$TS_LINE" +%s%3N)
-    LATENCY=$((T1 - T0))
-    echo "t0 (inicio): $T0 ms"
-    echo "t1 (evento): $T1 ms"
-    echo "Latencia total: $LATENCY ms"
-fi
-
-echo
-echo "[5] Número de eventos Watch"
-ADDED=$(grep -c "Pod added" watch.log)
-UPDATED=$(grep -c "Pod updated" watch.log)
-echo "Eventos 'Pod added': $ADDED"
-echo "Eventos 'Pod updated': $UPDATED"
-
-echo
-echo "[6] Peticiones LIST al API Server"
-LISTS=$(kubectl -n kube-system logs -l component=kube-apiserver | grep LIST | wc -l)
-echo "Número de LIST: $LISTS"
-
-echo
-echo "[7] Consumo de CPU del scheduler watch"
-kubectl top pod -n $SCHED_NS | grep my-scheduler-watch || echo "top no disponible"
-
-echo
-echo "[8] Eventos Kubernetes (Pending → Running)"
-kubectl get events --sort-by=.metadata.creationTimestamp | grep $TEST_POD
-
-echo
-echo "[9] Estado final del Pod"
-STATE=$(kubectl get pod $TEST_POD -o jsonpath='{.status.phase}')
-echo "Estado: $STATE"
-
-echo
-echo "[10] Limpieza del Pod de prueba"
-kubectl delete pod $TEST_POD >/dev/null 2>&1
-echo "Limpieza completada"
-
-echo "======================================================="
-echo " FIN DEL SCRIPT WATCH"
-echo "======================================================="
 ```
 
 ### ✅**Checkpoint 4:**

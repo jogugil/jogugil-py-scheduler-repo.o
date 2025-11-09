@@ -758,7 +758,15 @@ Interval: 2025-11-08T21:06:57Z -> 2025-11-08T21:06:58Z, duration approx: 1s
 
 ***Your scheduler should log a message like:***
     - Bound default/test-pod -> kind-control-plane
-    
+
+En los pasos anteriores ya mostramos las capturas de pantalla y todos lso pasos realizados para el despliegue del scheduler personalizado (scheduler-polling) y la cpatura de las métricas. Para hacerlo automatizado creamos un script que permite crear el clsuter, lanzar el scheduler, los pods de pruebas y calcular las metricas de latencia y carga de nuestro scheduler. El script se meustra a continuación:
+
+```Bash
+
+```
+
+Los resultados para este scheduler polling son:
+
 
 ## 🧩 Step 7 — Event-Driven Scheduler (Watch API)
 

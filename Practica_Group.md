@@ -420,108 +420,28 @@ spec:
     image: registry.k8s.io/pause:3.9
 ```
 
-**Manifiesto RBAC modificado para permitir acceso a Pods en `test-scheduler`:** . De esta manera tenemos Role(permisos) tanto para `kube-system` cómo para ´test-scheduler`. Permisos tanto para los namespaces como para el clúster. 
+**Manifiesto RBAC  no hace falta modificarlo para permitir acceso a Pods en `test-scheduler`:** . De esta manera tenemos Role(permisos) tanto para `kube-system` cómo para ´test-scheduler`. Permisos tanto para los namespaces como para el clúster. 
 
 ```yaml
-# ServiceAccount en kube-system
-apiVersion: v1
+  apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: my-scheduler
   namespace: kube-system
 ---
-# ClusterRole con permisos COMPLETOS del scheduler
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: my-scheduler-clusterrole
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch", "delete"]
-- apiGroups: [""]
-  resources: ["pods/binding"]
-  verbs: ["create"]
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["events"]
-  verbs: ["create", "patch", "update"]
-- apiGroups: [""]
-  resources: ["endpoints"]
-  verbs: ["create"]
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get", "list", "watch"]
----
-# ClusterRoleBinding que une ClusterRole y ServiceAccount
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: my-scheduler-clusterrolebinding
+  name: my-scheduler-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: my-scheduler-clusterrole
+  name: system:kube-scheduler
 subjects:
 - kind: ServiceAccount
   name: my-scheduler
   namespace: kube-system
 ---
-# 🔥 NUEVO: Role para kube-system
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: my-scheduler-role-kube-system
-  namespace: kube-system  # ✅ Para kube-system
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch", "patch", "update"]
----
-# 🔥 NUEVO: RoleBinding para kube-system
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: my-scheduler-rolebinding-kube-system
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: my-scheduler-role-kube-system
-subjects:
-- kind: ServiceAccount
-  name: my-scheduler
-  namespace: kube-system
----
-# Role para test-scheduler (el que ya tenías)
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: my-scheduler-role-test
-  namespace: test-scheduler
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch", "patch", "update"]
----
-# RoleBinding para test-scheduler (el que ya tenías)
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: my-scheduler-rolebinding-test
-  namespace: test-scheduler
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: my-scheduler-role-test
-subjects:
-- kind: ServiceAccount
-  name: my-scheduler
-  namespace: kube-system
----
-# Deployment del scheduler
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -530,19 +450,16 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
-      app: my-scheduler
+    matchLabels: {app: my-scheduler}
   template:
     metadata:
-      labels:
-        app: my-scheduler
+      labels: {app: my-scheduler}
     spec:
       serviceAccountName: my-scheduler
       containers:
       - name: scheduler
         image: my-py-scheduler:latest
-        imagePullPolicy: Never
-        args: ["--scheduler-name", "my-scheduler"]
+        args: ["--scheduler-name","my-scheduler"]
 
 ```
 

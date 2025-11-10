@@ -3,6 +3,8 @@ kind: Pod
 metadata:
   generateName: test-basic-
   namespace: test-scheduler
+  labels:
+    app: test-basic
 spec:
   schedulerName: my-scheduler
   containers:

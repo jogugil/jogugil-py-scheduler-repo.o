@@ -114,7 +114,9 @@ record_metrics() {
 run_pod_test() {
     local pod_name=$1 yaml_file=$2 namespace=$3
     echo "=== Ejecutando test de pod: $pod_name ==="
-    kubectl delete pod $pod_name -n $namespace --ignore-not-found=true
+    #kubectl delete pod $pod_name -n $namespace --ignore-not-found=true
+    # Con generateName nunca sabemos el nombre anterior, así que borramos por label
+    kubectl delete pod -l app=$pod_type -n "$namespace" --ignore-not-found=true
     sleep 2
     local t0_sec=$(date -u +%s)
     kubectl apply -f "$yaml_file" -n $namespace
@@ -166,11 +168,23 @@ write_pod_metrics_to_temp() {
 
 measure_and_save_pod_metrics() {
     local pod_name=$1 pod_type=$2 yaml_file=$3 namespace=$4
-    kubectl delete pod "$pod_name" -n "$namespace" --ignore-not-found=true
+    
+    # Con generateName nunca sabemos el nombre anterior, así que borramos por label
+    kubectl delete pod -l app=$pod_type -n "$namespace" --ignore-not-found=true
+    
     sleep 1
+    
     local t0=$(date +%s)
-    kubectl apply -f "$yaml_file" -n "$namespace"
+    
+    # Aplicamos el YAML que usa generateName
+    created_pod=$(kubectl apply -f "$yaml_file" -n "$namespace" -o jsonpath='{.metadata.name}')
+    
+    # Usamos el nombre REAL generado
+    pod_name="$created_pod"
+    
+    # Esperamos al pod real
     kubectl wait --for=condition=Ready pod/"$pod_name" -n "$namespace" --timeout=120s || true
+    
     sleep 1
 
     local latency=$(( $(date +%s) - t0 ))

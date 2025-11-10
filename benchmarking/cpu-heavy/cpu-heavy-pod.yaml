@@ -3,6 +3,8 @@ kind: Pod
 metadata:
   generateName: cpu-heavy-pod-
   namespace: test-scheduler
+  labels:
+    app: cpu-heavy
 spec:
   schedulerName: my-scheduler
   containers:

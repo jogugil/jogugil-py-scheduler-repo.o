@@ -27,10 +27,10 @@ NGINX_IMAGE="nginx:latest"
 BASIC_IMAGE="pause:3.9"
 
 # Rutas relativas
-POLLING_PATH="../../variants/polling/scheduler.py"
-WATCH_PATH="../../variants/watch-skeleton/scheduler.py"
-DOCKERFILE_PATH="../../Dockerfile"
-RBAC_PATH="../../rbac-deploy.yaml"
+POLLING_PATH="../variants/polling/scheduler.py"
+WATCH_PATH="../variants/watch-skeleton/scheduler.py"
+DOCKERFILE_PATH="../Dockerfile"
+RBAC_PATH="../rbac-deploy.yaml"
 
 # Parametrop Debug y Métricas
 RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
@@ -76,27 +76,30 @@ load_image_to_cluster() {
     echo "=== Construyendo imagen [$IMAGE_NAME] desde [$BUILD_DIR] ==="   # Informamos de que iniciamos la construcción
     docker build -t "$IMAGE_NAME" "$BUILD_DIR"                            # Construimos la imagen Docker con la etiqueta indicada
 
-    ALL_NODES=$(kind get nodes --name "$CLUSTER_NAME")   # Obtenemos todos los nodos del clúster
-    # Seleccionamos los nodos destino
-    local TARGET_NODES
-    if [[ "$ONLY_MASTER" == "true" ]]; then
-        TARGET_NODES=$(echo "$ALL_NODES" | grep "control-plane")
+    # Obtenemos todos los nodos del clúster
+    mapfile -t ALL_NODES < <(kind get nodes --name "$CLUSTER_NAME")
+
+    # Obtenemos todos los nodos del clúster. Con mapfile creamos un vector con los nodos
+    if [[ ${#ALL_NODES[@]} -eq 1 ]]; then
+        node="${ALL_NODES[0]}"
+        echo "=== Cargando imagen $IMAGE_NAME en el único nodo: [$node] ==="
+        kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
+        wait_for_image "$IMAGE_NAME" "$node"
     else
-        TARGET_NODES=$(echo "$ALL_NODES" | grep "worker")
-
-        # Si no hay workers, usamos el control-plane
-        if [[ -z "$TARGET_NODES" ]]; then
-            TARGET_NODES="$ALL_NODES"
-        fi
+        for node in "${ALL_NODES[@]}"; do
+            if [[ "$ONLY_MASTER" == "true" && $node == *control-plane* ]]; then
+                echo "=== Cargando imagen $IMAGE_NAME en el nodo control-plane: [$node] ==="
+                kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
+                wait_for_image "$IMAGE_NAME" "$node"
+            elif [[ "$ONLY_MASTER" != "true" && $node == *worker* ]]; then
+                echo "=== Cargando imagen $IMAGE_NAME en el nodo worker: [$node] ==="
+                kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
+                wait_for_image "$IMAGE_NAME" "$node"
+            fi
+        done
     fi
-    # De esta forma optimizamos cuando el scheduler asigna a cualquier nodo el Pod. Ya tenemos su imagen cargada y optimizamos tiempo
-    for NODE in $TARGET_NODES; do             # Recorremos la lista de nodos donde quiero cargar la imagen (wrokers <- Pods, controil Plane <- scheduler)
-        echo "=== Cargando imagen $IMAGE_NAME en el node :[$NODE] ==="
-        kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$NODE"  # Cargamos la imagen en el nodo que deseamos 
-        wait_for_image "$IMAGE_NAME" "$NODE"  # Esperamos a que cada nodo vea la imagen
-    done
 
-    echo "=== Imagen $IMAGE_NAME disponible en todos los nodos ==="       # Confirmamos que la imagen ya está disponible en todos los nodos
+    echo "=== Imagen $IMAGE_NAME cargada en los nodos seleccionados ==="
 }
 
 # Crear clúster nuevo o reiniciar existente
@@ -235,6 +238,24 @@ deploy_scheduler() {
     kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
     # Esperamos a que el Deployment se despliegue correctamente
     # Esto asegura que el scheduler esté listo antes de ejecutar cualquier pod que dependa de él
+
+
+    # Si falla, muestra logs y detalles
+    if [ $? -ne 0 ]; then
+        echo "=== ERROR: Falló el despliegue del scheduler ==="
+        echo "=== Descripción del pod ==="
+        kubectl describe pod -n kube-system -l app=my-scheduler
+        
+        echo "=== Logs del scheduler ==="
+        kubectl logs -n kube-system -l app=my-scheduler --tail=50
+        
+        echo "=== Estado de los pods en kube-system ==="
+        kubectl get pods -n kube-system
+        
+        exit 1
+    fi
+
+
 }
 
 # ========================
@@ -252,9 +273,9 @@ docker container prune -f
 select_scheduler_variant "$1"
 
 # Copiar Dockerfile y requirements al directorio actual
-cp ../../Dockerfile ./Dockerfile
-cp ../../requirements.txt ./requirements.txt
-cp ../../rbac-deploy.yaml ./rbac-deploy.yaml
+cp ../Dockerfile ./Dockerfile
+cp ../requirements.txt ./requirements.txt
+cp ../rbac-deploy.yaml ./rbac-deploy.yaml
 
 # Limpiar imágenes locales y contenedores detenidos
 echo "=== Limpiando imágenes y contenedores locales ==="
@@ -268,13 +289,13 @@ create_cluster
 clean_namespace
 
 # Construir y cargar imagen del scheduler
-load_image_to_cluster "$SCHED_IMAGE" "./"
+load_image_to_cluster "$SCHED_IMAGE" "./" "true"
 
 # Construir y cargar imágenes basic/nginx/CPU/RAM
-load_image_to_cluster "$BASIC_IMAGE" "./test-basic"
-load_image_to_cluster "$NGINX_IMAGE" "./nginx-pod"
-load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
-load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
+load_image_to_cluster "$BASIC_IMAGE" "./test-basic" "false"
+load_image_to_cluster "$NGINX_IMAGE" "./nginx-pod" "false"
+load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy" "false"
+load_image_to_cluster "$RAM_IMAGE" "./ram-heavy" "false"
 # Cargamos módulos de métricas
 install_metrics_server
 show_cluster_info

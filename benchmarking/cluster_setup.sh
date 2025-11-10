@@ -275,9 +275,6 @@ load_image_to_cluster "$BASIC_IMAGE" "./test-basic"
 load_image_to_cluster "$NGINX_IMAGE" "./nginx-pod"
 load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
 load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
-# Construir y cargar imágenes CPU/RAM
-load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy"
-load_image_to_cluster "$RAM_IMAGE" "./ram-heavy"
 # Cargamos módulos de métricas
 install_metrics_server
 show_cluster_info
@@ -288,7 +285,7 @@ show_cluster_info
 echo "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
 
 # Desplegamos el scheduler custom (watch o polling)
-deploy_scheduler
+deploy_scheduler 'watch'
 
 # Ejecutar el script de benchmarking de pods
 # Podemos pasarle la variante de scheduler y el número de pods opcionalmente

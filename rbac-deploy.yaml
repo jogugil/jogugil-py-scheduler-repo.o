@@ -35,5 +35,4 @@ spec:
       - name: scheduler
         imagePullPolicy: Never
         image: my-py-scheduler:latest
-        imagePullPolicy: Never
         args: ["--scheduler-name","my-scheduler"]

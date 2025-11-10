@@ -1,0 +1,25 @@
+[2025-11-10T19:47:06Z] [INFO] Parámetros recibidos: 
+[2025-11-10T19:47:06Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-10T19:47:06Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-10T19:47:06Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-10T19:47:06Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-10T19:47:06Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-10T19:47:06Z] [DEBUG] Imágenes limpiadas exitosamente
+[2025-11-10T19:47:06Z] [ERROR] Falló en línea 67: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)
+[2025-11-10T19:47:06Z] [SUCCESS] Benchmarking completado exitosamente
+[2025-11-10T19:58:31Z] [INFO] Parámetros recibidos: 
+[2025-11-10T19:58:31Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-10T19:58:31Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-10T19:58:31Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-10T19:58:31Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-10T19:58:31Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-10T19:58:31Z] [DEBUG] Imágenes limpiadas exitosamente
+[2025-11-10T19:58:31Z] [ERROR] Falló en línea 55: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)
+[2025-11-10T20:04:56Z] [INFO] Parámetros recibidos: 
+[2025-11-10T20:04:56Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-10T20:04:56Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-10T20:04:56Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-10T20:04:56Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-10T20:04:56Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-10T20:04:56Z] [DEBUG] Imágenes limpiadas exitosamente
+[2025-11-10T20:04:56Z] [ERROR] Falló en línea 55: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)

@@ -1,0 +1,13 @@
+# Configuración de logrotate para los logs de benchmarking
+/home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/bech_log_*.log {
+    daily
+    missingok
+    rotate 10
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+    dateext
+    dateformat -%Y%m%d-%H%M%S
+    maxsize 10M
+}

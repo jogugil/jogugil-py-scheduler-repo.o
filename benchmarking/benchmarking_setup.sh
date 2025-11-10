@@ -1,12 +1,19 @@
 #!/bin/bash
-set -e
 
+# ========================================
+# CARGAR LOGGING Y MANEJO DE ERRORES
+# ========================================
+source ./logger.sh
+enable_error_trapping
 
 # =============================================
-# Parámetros
+# Parámetros (vienen de run_benchmark.sh)
 # =============================================
-SCHED_IMPL=${1:-polling}   # polling o watch
-NUM_PODS=${2:-20}          # Número de pods por tipo
+SCHED_IMPL=${1:-watch}   # polling o watch
+NUM_PODS=${2:-20}        # Número de pods por tipo
+
+
+
 NAMESPACE="test-scheduler"
 CLUSTER_NAME="sched-lab"
 RESULTS_JSON="scheduler_metrics_$(date +%Y%m%d_%H%M%S).json"
@@ -15,7 +22,7 @@ RESULTS_JSON="scheduler_metrics_$(date +%Y%m%d_%H%M%S).json"
 CLUSTERT_SETUP="kind-cluster.yaml"
 RBAC_SCHEDULER="rbac-deploy.yaml"
 CPU_POD="./cpu-heavy/cpu-heavy-pod.yaml"
-NGINX_POD="./nginx-pod/nginx_pod.yaml"
+NGINX_POD="./nginx/nginx_pod.yaml"
 RAM_POD="./ram-heavy/ram-heavy-pod.yaml"
 BASIC_POD="./test-basic/test-basic-pod.yaml"
 
@@ -36,10 +43,8 @@ RBAC_PATH="../rbac-deploy.yaml"
 RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
 LOGOUT_DEBUG="log/bechmarking.log"
 
-
 # Pods
 POD_TYPES=("cpu" "ram" "nginx" "basic")
-
 
 # ========================
 # Funciones
@@ -54,86 +59,138 @@ wait_for_image() {
 
     IMAGE_BASENAME="${IMAGE##*/}"
     local START=$(date +%s)
-    echo -n "Esperando imagen $IMAGE en nodo $NODE "
+    log "INFO" "Esperando imagen $IMAGE en nodo $NODE"
+    
     while true; do
         if docker exec "$NODE" crictl images | awk '{print $1":"$2}' | grep -q "$IMAGE_BASENAME"; then
-            echo " ✔"
+            log "INFO" "Imagen $IMAGE cargada correctamente en nodo $NODE"
             break
         fi
         local NOW=$(date +%s)
-        (( NOW > START + TIMEOUT )) && { echo; echo "ERROR: Timeout cargando imagen $IMAGE"; exit 1; }
-        echo -n "."
+        if (( NOW > START + TIMEOUT )); then
+            log "ERROR" "Timeout cargando imagen $IMAGE en nodo $NODE después de $TIMEOUT segundos"
+            exit 1
+        fi
+        log "DEBUG" "Imagen $IMAGE aún no disponible en $NODE, reintentando en $INTERVAL segundos..."
         sleep "$INTERVAL"
     done
 }
 
 # Carga y construye imagen en todos los nodos
 load_image_to_cluster() {
-    local IMAGE_NAME=$1                     # Guardamos el nombre de la imagen que queremos construir y cargar
-    local BUILD_DIR=$2                      # Guardamos el directorio desde el que construiremos la imagen
-    local ONLY_MASTER=$3                  # true → cargar solo en control-plane; false → solo workers
+    local IMAGE_NAME=$1
+    local BUILD_DIR=$2
+    local ONLY_MASTER=$3
 
-    echo "=== Construyendo imagen [$IMAGE_NAME] desde [$BUILD_DIR] ==="   # Informamos de que iniciamos la construcción
-    docker build -t "$IMAGE_NAME" "$BUILD_DIR"                            # Construimos la imagen Docker con la etiqueta indicada
+    log "INFO" "Iniciando construcción de imagen [$IMAGE_NAME] desde directorio [$BUILD_DIR]"
+    
+    if docker build -t "$IMAGE_NAME" "$BUILD_DIR"; then
+        log "INFO" "Imagen $IMAGE_NAME construida exitosamente"
+    else
+        log "ERROR" "Fallo en la construcción de la imagen $IMAGE_NAME desde $BUILD_DIR"
+        exit 1
+    fi
 
     # Obtenemos todos los nodos del clúster
     mapfile -t ALL_NODES < <(kind get nodes --name "$CLUSTER_NAME")
 
-    # Obtenemos todos los nodos del clúster. Con mapfile creamos un vector con los nodos
     if [[ ${#ALL_NODES[@]} -eq 1 ]]; then
         node="${ALL_NODES[0]}"
-        echo "=== Cargando imagen $IMAGE_NAME en el único nodo: [$node] ==="
-        kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
-        wait_for_image "$IMAGE_NAME" "$node"
+        log "INFO" "Cargando imagen $IMAGE_NAME en el único nodo: [$node]"
+        if kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"; then
+            wait_for_image "$IMAGE_NAME" "$node"
+        else
+            log "ERROR" "Fallo al cargar imagen $IMAGE_NAME en nodo $node"
+            exit 1
+        fi
     else
         for node in "${ALL_NODES[@]}"; do
             if [[ "$ONLY_MASTER" == "true" && $node == *control-plane* ]]; then
-                echo "=== Cargando imagen $IMAGE_NAME en el nodo control-plane: [$node] ==="
-                kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
-                wait_for_image "$IMAGE_NAME" "$node"
+                log "INFO" "Cargando imagen $IMAGE_NAME en nodo control-plane: [$node]"
+                if kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"; then
+                    wait_for_image "$IMAGE_NAME" "$node"
+                else
+                    log "ERROR" "Fallo al cargar imagen $IMAGE_NAME en control-plane $node"
+                    exit 1
+                fi
             elif [[ "$ONLY_MASTER" != "true" && $node == *worker* ]]; then
-                echo "=== Cargando imagen $IMAGE_NAME en el nodo worker: [$node] ==="
-                kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"
-                wait_for_image "$IMAGE_NAME" "$node"
+                log "INFO" "Cargando imagen $IMAGE_NAME en nodo worker: [$node]"
+                if kind load docker-image "$IMAGE_NAME" --name "$CLUSTER_NAME" --nodes "$node"; then
+                    wait_for_image "$IMAGE_NAME" "$node"
+                else
+                    log "ERROR" "Fallo al cargar imagen $IMAGE_NAME en worker $node"
+                    exit 1
+                fi
             fi
         done
     fi
 
-    echo "=== Imagen $IMAGE_NAME cargada en los nodos seleccionados ==="
+    log "INFO" "Imagen $IMAGE_NAME cargada exitosamente en todos los nodos seleccionados"
 }
 
 # Crear clúster nuevo o reiniciar existente
 create_cluster() {
     if kind get clusters | grep -q "^$CLUSTER_NAME$"; then
-        echo "=== Eliminando cluster existente $CLUSTER_NAME ==="
-        kind delete cluster --name "$CLUSTER_NAME"  >/dev/null 2>&1 || true
+        log "INFO" "Eliminando cluster existente $CLUSTER_NAME"
+        if kind delete cluster --name "$CLUSTER_NAME"; then
+            log "INFO" "Cluster $CLUSTER_NAME eliminado exitosamente"
+        else
+            log "WARN" "No se pudo eliminar cluster $CLUSTER_NAME o no existía"
+        fi
     fi
 
-    echo "=== Creando cluster $CLUSTER_NAME ==="
-    kind create cluster --name "$CLUSTER_NAME"  --config $CLUSTERT_SETUP
+    log "INFO" "Creando nuevo cluster $CLUSTER_NAME"
+    if kind create cluster --name "$CLUSTER_NAME" --config $CLUSTERT_SETUP; then
+        log "INFO" "Cluster $CLUSTER_NAME creado exitosamente"
+    else
+        log "ERROR" "Fallo al crear cluster $CLUSTER_NAME"
+        exit 1
+    fi
 
-    echo -n "Esperando nodo control-plane Ready"
-    until kubectl get node "$CLUSTER_NAME-control-plane" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
-        echo -n "."
+    log "INFO" "Esperando que nodo control-plane esté en estado Ready"
+    local wait_time=0
+    local max_wait=120
+    until kubectl get node "$CLUSTER_NAME-control-plane" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; do
+        if (( wait_time >= max_wait )); then
+            log "ERROR" "Timeout esperando por nodo control-plane después de $max_wait segundos"
+            exit 1
+        fi
+        log "DEBUG" "Nodo control-plane aún no está Ready, esperando... ($wait_time/$max_wait segundos)"
         sleep 2
+        ((wait_time+=2))
     done
-    echo " listo"
+    log "INFO" "Nodo control-plane está Ready y operativo"
 }
 
 # Limpiar recursos antiguos en namespace
 clean_namespace() {
-    echo "=== Limpiando namespace $NAMESPACE ==="
-    kubectl delete --all pods --namespace "$NAMESPACE" || true
-    kubectl delete --all deployments --namespace "$NAMESPACE" || true
-    if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
-        echo "=== Creando namespace $NAMESPACE ==="
-        kubectl create namespace "$NAMESPACE"
+    log "INFO" "Limpiando namespace $NAMESPACE"
+    
+    if kubectl delete --all pods --namespace "$NAMESPACE"; then
+        log "DEBUG" "Pods eliminados del namespace $NAMESPACE"
+    else
+        log "DEBUG" "No había pods para eliminar en $NAMESPACE"
+    fi
+    
+    if kubectl delete --all deployments --namespace "$NAMESPACE"; then
+        log "DEBUG" "Deployments eliminados del namespace $NAMESPACE"
+    else
+        log "DEBUG" "No había deployments para eliminar en $NAMESPACE"
+    fi
+    
+    if ! kubectl get namespace "$NAMESPACE"; then
+        log "INFO" "Creando namespace $NAMESPACE"
+        if kubectl create namespace "$NAMESPACE"; then
+            log "INFO" "Namespace $NAMESPACE creado exitosamente"
+        else
+            log "ERROR" "Fallo al crear namespace $NAMESPACE"
+            exit 1
+        fi
+    else
+        log "DEBUG" "Namespace $NAMESPACE ya existe"
     fi
 }
 
-# ========================================================
-# Función: seleccionar y copiar la variante del scheduler
-# ========================================================
 # =============================================
 # Función para copiar el scheduler seleccionado
 # =============================================
@@ -141,19 +198,30 @@ copy_scheduler() {
     local SCHED_IMPL=$1
     case "$SCHED_VARIANT" in
         polling)
-            echo "Copiando scheduler-polling..."
-            cp "$POLLING_PATH" ./scheduler.py
+            log "INFO" "Copiando scheduler-polling desde $POLLING_PATH"
+            if cp "$POLLING_PATH" ./scheduler.py; then
+                log "DEBUG" "Scheduler polling copiado exitosamente"
+            else
+                log "ERROR" "Fallo al copiar scheduler polling desde $POLLING_PATH"
+                exit 1
+            fi
             ;;
         watch)
-            echo "Copiando scheduler-watch..."
-            cp "$WATCH_PATH" ./scheduler.py
+            log "INFO" "Copiando scheduler-watch desde $WATCH_PATH"
+            if cp "$WATCH_PATH" ./scheduler.py; then
+                log "DEBUG" "Scheduler watch copiado exitosamente"
+            else
+                log "ERROR" "Fallo al copiar scheduler watch desde $WATCH_PATH"
+                exit 1
+            fi
             ;;
         *)
-            echo "Implementación desconocida: $SCHED_VARIANT"
+            log "ERROR" "Implementación de scheduler desconocida: $SCHED_VARIANT"
             exit 1
-        ;;
+            ;;
     esac
 }
+
 select_scheduler_variant() {
     local VARIANT_PARAM=$1
     local DEFAULT_VARIANT="watch"
@@ -161,165 +229,215 @@ select_scheduler_variant() {
 
     case "$VARIANT_PARAM" in
         "")
-            echo "No se pasó parámetro de scheduler, se usará por defecto: $SCHED_VARIANT"
+            log "INFO" "No se pasó parámetro de scheduler, se usará por defecto: $SCHED_VARIANT"
             ;;
         polling|watch)
             SCHED_VARIANT="$VARIANT_PARAM"
+            log "INFO" "Scheduler seleccionado por parámetro: $SCHED_VARIANT"
             ;;
         *)
-            echo "Parámetro inválido '$VARIANT_PARAM'. Solo se permiten 'polling' o 'watch'. Se usará por defecto: $DEFAULT_VARIANT"
+            log "WARN" "Parámetro inválido '$VARIANT_PARAM'. Solo se permiten 'polling' o 'watch'. Se usará por defecto: $DEFAULT_VARIANT"
             ;;
     esac
-    echo "=== Variante de scheduler seleccionada: $SCHED_VARIANT ==="
-
+    
+    log "INFO" "Variante de scheduler seleccionada: $SCHED_VARIANT"
     copy_scheduler $SCHED_VARIANT
-    echo "=== Scheduler copiado a ./scheduler.py ==="
+    log "INFO" "Scheduler copiado exitosamente a ./scheduler.py"
 }
 
 # ========================
 # Install metrics-server if needed
 # ========================
 install_metrics_server() {
-    if ! kubectl get deployment metrics-server -n kube-system >/dev/null 2>&1; then
-        echo "=== Installing metrics-server ==="
-        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-        kubectl patch deployment metrics-server -n kube-system --type='json' \
-            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
-        kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system
+    if ! kubectl get deployment metrics-server -n kube-system; then
+        log "INFO" "Instalando metrics-server en el cluster"
+        if kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml; then
+            log "DEBUG" "Metrics-server aplicado desde manifiesto oficial"
+        else
+            log "ERROR" "Fallo al aplicar metrics-server"
+            exit 1
+        fi
+        
+        log "DEBUG" "Parcheando metrics-server para permitir TLS inseguro (entorno de pruebas)"
+        if kubectl patch deployment metrics-server -n kube-system --type='json' \
+            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'; then
+            log "DEBUG" "Metrics-server parcheado exitosamente"
+        else
+            log "WARN" "No se pudo parchear metrics-server, continuando..."
+        fi
+
+        log "INFO" "Esperando a que metrics-server esté disponible"
+        if kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system; then
+            log "INFO" "Metrics-server está disponible"
+        else
+            log "WARN" "Metrics-server no está disponible dentro del timeout, continuando..."
+        fi
+    else
+        log "DEBUG" "Metrics-server ya está instalado"
     fi
 
-    echo "=== Waiting for metrics-server to be ready ==="
+    log "INFO" "Esperando 30 segundos para que metrics-server se estabilice"
     sleep 30
 }
-
 
 # ========================
 # Function to show cluster and images info
 # ========================
 show_cluster_info() {
-    echo "=== Listing all Kind clusters ==="
+    log "DEBUG" "Mostrando información del cluster"
+    
+    log "INFO" "=== Listing all Kind clusters ==="
     kind get clusters
 
-    echo -e "\n=== Showing nodes and status ==="
+    log "INFO" "=== Showing nodes and status ==="
     kubectl get nodes -o wide
 
-    echo -e "\n=== Cluster info ==="
+    log "INFO" "=== Cluster info ==="
     kubectl cluster-info
 
-    echo -e "\n=== Listing namespaces ==="
+    log "INFO" "=== Listing namespaces ==="
     kubectl get ns
 
-    echo -e "\n=== Listing all pods in all namespaces ==="
+    log "INFO" "=== Listing all pods in all namespaces ==="
     kubectl get pods --all-namespaces -o wide
 
-    echo -e "\n=== Checking images on each node ==="
+    log "INFO" "=== Checking images on each node ==="
     for node in $(kind get nodes); do
-        echo "=== Images in node $node ==="
+        log "DEBUG" "Imágenes en nodo $node:"
         docker exec $node crictl images
     done
 
-    echo -e "\n=== Current pod metrics ==="
-    kubectl top pods --all-namespaces || echo "No resources found"
+    log "INFO" "=== Current pod metrics ==="
+    if kubectl top pods --all-namespaces; then
+        log "DEBUG" "Métricas de pods obtenidas exitosamente"
+    else
+        log "WARN" "No se pudieron obtener métricas de pods"
+    fi
 }
 
 # =============================================
 # Desplegar scheduler
 # =============================================
 deploy_scheduler() {
-    echo "=== Desplegando scheduler $SCHED_IMPL ==="            # Informamos qué variante de scheduler vamos a desplegar
+    local scheduler_type=$1
+    log "INFO" "Iniciando despliegue del scheduler: $scheduler_type"
 
-    kubectl delete deployment my-scheduler -n kube-system --ignore-not-found
-    # Eliminamos cualquier despliegue previo del scheduler para evitar conflictos
-    # --ignore-not-found evita error si no existía antes
+    log "DEBUG" "Eliminando despliegue previo del scheduler si existe"
+    if kubectl delete deployment my-scheduler -n kube-system --ignore-not-found; then
+        log "DEBUG" "Despliegue previo eliminado (si existía)"
+    fi
 
-    kubectl apply -f $RBAC_SCHEDULER
-    # Aplicamos los manifiestos del scheduler (RBAC, ServiceAccount, Deployment, etc.)
+    log "INFO" "Aplicando configuración RBAC y Deployment del scheduler"
+    if kubectl apply -f $RBAC_SCHEDULER; then
+        log "DEBUG" "Manifiestos RBAC aplicados exitosamente"
+    else
+        log "ERROR" "Fallo al aplicar manifiestos RBAC del scheduler"
+        exit 1
+    fi
 
-    kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
-    # Esperamos a que el Deployment se despliegue correctamente
-    # Esto asegura que el scheduler esté listo antes de ejecutar cualquier pod que dependa de él
-
-
-    # Si falla, muestra logs y detalles
-    if [ $? -ne 0 ]; then
-        echo "=== ERROR: Falló el despliegue del scheduler ==="
-        echo "=== Descripción del pod ==="
+    log "INFO" "Esperando a que el scheduler se despliegue correctamente (timeout: 120s)"
+    if kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s; then
+        log "INFO" "Scheduler desplegado exitosamente"
+    else
+        log "ERROR" "Fallo en el despliegue del scheduler - mostrando diagnóstico"
+        
+        log "ERROR" "=== Descripción del pod del scheduler ==="
         kubectl describe pod -n kube-system -l app=my-scheduler
         
-        echo "=== Logs del scheduler ==="
+        log "ERROR" "=== Logs del scheduler ==="
         kubectl logs -n kube-system -l app=my-scheduler --tail=50
         
-        echo "=== Estado de los pods en kube-system ==="
+        log "ERROR" "=== Estado de los pods en kube-system ==="
         kubectl get pods -n kube-system
         
         exit 1
     fi
-
-
 }
 
 # ========================
 # Ejecución principal
 # ========================
 
-echo "=== INICIO SETUP COMPLETO ==="
+main() {
+    log "INFO" "=== INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ==="
 
-# Limpiar imágenes locales y contenedores detenidos
-echo "=== Limpiando imágenes y contenedores locales ==="
-docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE" >/dev/null 2>&1 || true
-docker container prune -f
+    # Limpiar imágenes locales y contenedores detenidos
+    log "INFO" "Limpiando imágenes y contenedores locales"
+    if docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE" >/dev/null 2>&1; then
+        log "DEBUG" "Imágenes limpiadas exitosamente"
+    else
+        log "DEBUG" "No había imágenes para limpiar o falló la limpieza"
+    fi
+    
+    if docker container prune -f; then
+        log "DEBUG" "Contenedores limpiados exitosamente"
+    fi
 
-# Selección de variante de scheduler
-select_scheduler_variant "$1"
+    # Selección de variante de scheduler
+    select_scheduler_variant "$1"
 
-# Copiar Dockerfile y requirements al directorio actual
-cp ../Dockerfile ./Dockerfile
-cp ../requirements.txt ./requirements.txt
-cp ../rbac-deploy.yaml ./rbac-deploy.yaml
+    # Copiar Dockerfile y requirements al directorio actual
+    log "DEBUG" "Copiando archivos de configuración al directorio actual"
+    if cp ../Dockerfile ./Dockerfile && \
+       cp ../requirements.txt ./requirements.txt && \
+       cp ../rbac-deploy.yaml ./rbac-deploy.yaml; then
+        log "DEBUG" "Archivos de configuración copiados exitosamente"
+    else
+        log "ERROR" "Fallo al copiar archivos de configuración"
+        exit 1
+    fi
 
-# Limpiar imágenes locales y contenedores detenidos
-echo "=== Limpiando imágenes y contenedores locales ==="
-docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE" >/dev/null 2>&1 || true
-docker container prune -f
+    # Crear clúster nuevo
+    create_cluster
 
-# Crear clúster nuevo
-create_cluster
+    # Limpiar namespace y recursos antiguos
+    clean_namespace
 
-# Limpiar namespace y recursos antiguos
-clean_namespace
+    # Construir y cargar imagen del scheduler
+    log "INFO" "Construyendo y cargando imagen del scheduler personalizado"
+    load_image_to_cluster "$SCHED_IMAGE" "./" "true"
 
-# Construir y cargar imagen del scheduler
-load_image_to_cluster "$SCHED_IMAGE" "./" "true"
+    # Construir y cargar imágenes basic/nginx/CPU/RAM
+    log "INFO" "Construyendo y cargando imágenes de prueba"
+    load_image_to_cluster "$BASIC_IMAGE" "./test-basic" "false"
+    load_image_to_cluster "$NGINX_IMAGE" "./nginx" "false"
+    load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy" "false"
+    load_image_to_cluster "$RAM_IMAGE" "./ram-heavy" "false"
 
-# Construir y cargar imágenes basic/nginx/CPU/RAM
-load_image_to_cluster "$BASIC_IMAGE" "./test-basic" "false"
-load_image_to_cluster "$NGINX_IMAGE" "./nginx" "false"
-load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy" "false"
-load_image_to_cluster "$RAM_IMAGE" "./ram-heavy" "false"
-# Cargamos módulos de métricas
-install_metrics_server
-show_cluster_info
+    # Cargamos módulos de métricas
+    log "INFO" "Configurando métricas del cluster"
+    install_metrics_server
+    
+    log "DEBUG" "Mostrando estado actual del cluster"
+    show_cluster_info
 
-# Vemos lo que hemso cosntruido
-show_cluster_info
+    log "INFO" "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
 
-echo "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
+    # Desplegamos el scheduler custom (watch o polling)
+    deploy_scheduler "$SCHED_IMPL"
 
-# Desplegamos el scheduler custom (watch o polling)
-deploy_scheduler 'watch'
+    # Ejecutar el script de benchmarking de pods
+    SCHED_IMPL=${SCHED_IMPL:-polling}
+    NUM_PODS=${NUM_PODS:-20}
+    
+    log "INFO" "Iniciando tests de benchmarking con scheduler: $SCHED_IMPL, pods por tipo: $NUM_PODS"
+    log "INFO" "=== LANZANDO TEST DE PODS EN PARALELO ==="
+    
+    if ./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"; then
+        log "INFO" "Tests de pods ejecutados exitosamente"
+    else
+        log "ERROR" "Fallo en la ejecución de los tests de pods"
+        exit 1
+    fi
 
-# Ejecutar el script de benchmarking de pods
-# Podemos pasarle la variante de scheduler y el número de pods opcionalmente
-SCHED_IMPL=${SCHED_IMPL:-polling}  # la misma variante que usamos arriba
-NUM_PODS=${NUM_PODS:-20}           # por defecto 20 pods
-echo "=== LANZANDO TEST DE PODS EN PARALELO ==="
-./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"
+    # Una vez termine, los resultados ya estarán en $RESULTS_DIR y $RESULTS_JSON
+    log "INFO" "=== TEST DE PODS FINALIZADO ==="
+    log "INFO" "Resultados CSV: ./my-scheduler/metrics/results.csv"
+    log "INFO" "Resultados JSON: ./$SCHED_IMPL/metrics/scheduler_metrics_*.json"
+    log "INFO" "Resultados se guardarán en $RESULTS_FILE"
 
-# Una vez termine, los resultados ya estarán en $RESULTS_DIR y $RESULTS_JSON
-echo "=== TEST DE PODS FINALIZADO ==="
-echo "Resultados CSV: ./my-scheduler/metrics/results.csv"
-echo "Resultados JSON: ./$SCHED_IMPL/metrics/scheduler_metrics_*.json"
+    log "INFO" "=== SETUP COMPLETO FINALIZADO EXITOSAMENTE ==="
+}
 
-
-echo "Resultados se guardarán en $RESULTS_FILE"
-
+# Ejecutar función principal
+main "$@"

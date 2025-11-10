@@ -33,5 +33,6 @@ spec:
       serviceAccountName: my-scheduler
       containers:
       - name: scheduler
+        imagePullPolicy: Never
         image: my-py-scheduler:latest
         args: ["--scheduler-name","my-scheduler"]

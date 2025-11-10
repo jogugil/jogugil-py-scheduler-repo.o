@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: cpu-heavy-pod
+  generateName: cpu-heavy-pod-
   namespace: test-scheduler
 spec:
   schedulerName: my-scheduler

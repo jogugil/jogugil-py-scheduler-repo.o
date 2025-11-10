@@ -168,34 +168,63 @@ write_pod_metrics_to_temp() {
 
 measure_and_save_pod_metrics() {
     local pod_name=$1 pod_type=$2 yaml_file=$3 namespace=$4
-    
+
+    echo "=== [TRACE] Iniciando medida de pod: pod_type=$pod_type, pod_name=$pod_name, yaml_file=$yaml_file ==="
+
     # Con generateName nunca sabemos el nombre anterior, así que borramos por label
+    echo "[TRACE] Borrando pods existentes con label app=$pod_type en namespace $namespace"
     kubectl delete pod -l app=$pod_type -n "$namespace" --ignore-not-found=true
-    
+    echo "[TRACE] Pods eliminados (si existían)"
+
     sleep 1
-    
+
     local t0=$(date +%s)
-    
+    echo "[TRACE] Tiempo inicial t0=$t0"
+
     # Aplicamos el YAML que usa generateName
-    created_pod=$(kubectl apply -f "$yaml_file" -n "$namespace" -o jsonpath='{.metadata.name}')
-    
+    echo "[TRACE] Aplicando YAML: $yaml_file"
+    created_pod=$(kubectl create -f "$yaml_file" -n "$namespace" -o jsonpath='{.metadata.name}')
+    if [[ $? -ne 0 ]]; then
+        echo "[ERROR] kubectl apply falló: $created_pod"
+        return 1
+    fi
+    echo "[TRACE] Pod creado: $created_pod"
+
     # Usamos el nombre REAL generado
     pod_name="$created_pod"
-    
+    echo "[TRACE] Pod real para medir: $pod_name"
+
     # Esperamos al pod real
-    kubectl wait --for=condition=Ready pod/"$pod_name" -n "$namespace" --timeout=120s || true
-    
+    echo "[TRACE] Esperando a que el pod esté Ready..."
+    wait_output=$(kubectl wait --for=condition=Ready pod/"$pod_name" -n "$namespace" --timeout=120s 2>&1) || true
+    echo "[TRACE] Resultado wait: $wait_output"
+
     sleep 1
 
     local latency=$(( $(date +%s) - t0 ))
-    local pending_latency=$(get_pending_running_latency "$pod_name" "$namespace")
-    local pull_latency=$(get_pull_start_latency "$pod_name" "$namespace")
-    read -r cpu mem <<< "$(get_scheduler_resources_avg)"
-    local list_ops=$(get_list_ops "$pod_name")
-    read -r retries implicit_retries events <<< "$(get_scheduler_attempts_events "$pod_name")"
+    echo "[TRACE] Latencia total (s): $latency"
 
-    write_pod_metrics_to_temp "$pod_name" "$pod_type" "$latency" "$pending_latency" "$pull_latency" "$cpu" "$mem" "$list_ops" "$retries" "$implicit_retries" "$events"
-    echo "Métricas guardadas para $pod_name"
+    echo "[TRACE] Obteniendo latencia pending->running"
+    local pending_latency=$(get_pending_running_latency "$pod_name" "$namespace")
+    echo "[TRACE] pending_latency=$pending_latency"
+
+    echo "[TRACE] Obteniendo pull start latency"
+    local pull_latency=$(get_pull_start_latency "$pod_name" "$namespace")
+    echo "[TRACE] pull_latency=$pull_latency"
+
+    echo "[TRACE] Obteniendo uso medio del scheduler"
+    read -r cpu mem <<< "$(get_scheduler_resources_avg)"
+    echo "[TRACE] cpu=$cpu, mem=$mem"
+
+    echo "[TRACE] Obteniendo operaciones en lista"
+    local list_ops=$(get_list_ops "$pod_name")
+    echo "[TRACE] list_ops=$list_ops"
+
+    echo "[TRACE] Obteniendo reintentos y eventos"
+    read -r retries implicit_retries events <<< "$(get_scheduler_attempts_events "$pod_name")"
+    echo "[TRACE] retries=$retries, implicit_retries=$implicit_retries, events=$events"
+
+    echo "=== [TRACE] Medición completada para pod: $pod_name ==="
 }
 
 # ========================================
@@ -207,7 +236,7 @@ run_all_tests_parallel() {
     for pod_type in "${POD_TYPES[@]}"; do
         for i in $(seq 1 "$NUM_PODS"); do
             pod_name="${pod_type}-pod-${i}"
-            yaml_file="./yamls/${pod_type}.yaml"
+            yaml_file="./${pod_type}/${pod_type}-pod.yaml"
             measure_and_save_pod_metrics "$pod_name" "$pod_type" "$yaml_file" "$NAMESPACE" &
             pids+=($!)
         done

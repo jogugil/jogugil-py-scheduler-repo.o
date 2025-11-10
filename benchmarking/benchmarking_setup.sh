@@ -17,7 +17,7 @@ RBAC_SCHEDULER="rbac-deploy.yaml"
 CPU_POD="./cpu-heavy/cpu-heavy-pod.yaml"
 NGINX_POD="./nginx-pod/nginx_pod.yaml"
 RAM_POD="./ram-heavy/ram-heavy-pod.yaml"
-BASIC_POD="./test-basic/test-basic.yaml"
+BASIC_POD="./test-basic/test-basic-pod.yaml"
 
 # Imágenes
 SCHED_IMAGE="my-py-scheduler:latest"
@@ -293,7 +293,7 @@ load_image_to_cluster "$SCHED_IMAGE" "./" "true"
 
 # Construir y cargar imágenes basic/nginx/CPU/RAM
 load_image_to_cluster "$BASIC_IMAGE" "./test-basic" "false"
-load_image_to_cluster "$NGINX_IMAGE" "./nginx-pod" "false"
+load_image_to_cluster "$NGINX_IMAGE" "./nginx" "false"
 load_image_to_cluster "$CPU_IMAGE" "./cpu-heavy" "false"
 load_image_to_cluster "$RAM_IMAGE" "./ram-heavy" "false"
 # Cargamos módulos de métricas
@@ -313,7 +313,7 @@ deploy_scheduler 'watch'
 SCHED_IMPL=${SCHED_IMPL:-polling}  # la misma variante que usamos arriba
 NUM_PODS=${NUM_PODS:-20}           # por defecto 20 pods
 echo "=== LANZANDO TEST DE PODS EN PARALELO ==="
-./bechmarking/scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"
+./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"
 
 # Una vez termine, los resultados ya estarán en $RESULTS_DIR y $RESULTS_JSON
 echo "=== TEST DE PODS FINALIZADO ==="

@@ -33,6 +33,10 @@ spec:
       serviceAccountName: my-scheduler
       nodeSelector:
         kubernetes.io/hostname: sched-lab-control-plane
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
       containers:
       - name: scheduler
         imagePullPolicy: Never

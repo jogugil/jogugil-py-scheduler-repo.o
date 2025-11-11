@@ -12,8 +12,6 @@ enable_error_trapping
 SCHED_IMPL=${1:-watch}   # polling o watch
 NUM_PODS=${2:-20}        # Número de pods por tipo
 
-
-
 NAMESPACE="test-scheduler"
 CLUSTER_NAME="sched-lab"
 RESULTS_JSON="scheduler_metrics_$(date +%Y%m%d_%H%M%S).json"
@@ -50,6 +48,11 @@ POD_TYPES=("cpu" "ram" "nginx" "basic")
 # Funciones
 # ========================
 
+# Ejecutar un comando "seguro" que no detenga el script si falla
+safe_run() {
+    "$@" || log "WARN" "Comando '$*' falló pero se ignora"
+}
+
 # Espera que la imagen esté disponible en todos los nodos
 wait_for_image() {
     local IMAGE=$1
@@ -60,7 +63,7 @@ wait_for_image() {
     IMAGE_BASENAME="${IMAGE##*/}"
     local START=$(date +%s)
     log "INFO" "Esperando imagen $IMAGE en nodo $NODE"
-    
+
     while true; do
         if docker exec "$NODE" crictl images | awk '{print $1":"$2}' | grep -q "$IMAGE_BASENAME"; then
             log "INFO" "Imagen $IMAGE cargada correctamente en nodo $NODE"
@@ -83,7 +86,7 @@ load_image_to_cluster() {
     local ONLY_MASTER=$3
 
     log "INFO" "Iniciando construcción de imagen [$IMAGE_NAME] desde directorio [$BUILD_DIR]"
-    
+
     if docker build -t "$IMAGE_NAME" "$BUILD_DIR"; then
         log "INFO" "Imagen $IMAGE_NAME construida exitosamente"
     else
@@ -132,11 +135,7 @@ load_image_to_cluster() {
 create_cluster() {
     if kind get clusters | grep -q "^$CLUSTER_NAME$"; then
         log "INFO" "Eliminando cluster existente $CLUSTER_NAME"
-        if kind delete cluster --name "$CLUSTER_NAME"; then
-            log "INFO" "Cluster $CLUSTER_NAME eliminado exitosamente"
-        else
-            log "WARN" "No se pudo eliminar cluster $CLUSTER_NAME o no existía"
-        fi
+        safe_run kind delete cluster --name "$CLUSTER_NAME"
     fi
 
     log "INFO" "Creando nuevo cluster $CLUSTER_NAME"
@@ -165,19 +164,10 @@ create_cluster() {
 # Limpiar recursos antiguos en namespace
 clean_namespace() {
     log "INFO" "Limpiando namespace $NAMESPACE"
-    
-    if kubectl delete --all pods --namespace "$NAMESPACE"; then
-        log "DEBUG" "Pods eliminados del namespace $NAMESPACE"
-    else
-        log "DEBUG" "No había pods para eliminar en $NAMESPACE"
-    fi
-    
-    if kubectl delete --all deployments --namespace "$NAMESPACE"; then
-        log "DEBUG" "Deployments eliminados del namespace $NAMESPACE"
-    else
-        log "DEBUG" "No había deployments para eliminar en $NAMESPACE"
-    fi
-    
+
+    safe_run kubectl delete --all pods --namespace "$NAMESPACE"
+    safe_run kubectl delete --all deployments --namespace "$NAMESPACE"
+
     if ! kubectl get namespace "$NAMESPACE"; then
         log "INFO" "Creando namespace $NAMESPACE"
         if kubectl create namespace "$NAMESPACE"; then
@@ -239,7 +229,7 @@ select_scheduler_variant() {
             log "WARN" "Parámetro inválido '$VARIANT_PARAM'. Solo se permiten 'polling' o 'watch'. Se usará por defecto: $DEFAULT_VARIANT"
             ;;
     esac
-    
+
     log "INFO" "Variante de scheduler seleccionada: $SCHED_VARIANT"
     copy_scheduler $SCHED_VARIANT
     log "INFO" "Scheduler copiado exitosamente a ./scheduler.py"
@@ -257,14 +247,9 @@ install_metrics_server() {
             log "ERROR" "Fallo al aplicar metrics-server"
             exit 1
         fi
-        
+
         log "DEBUG" "Parcheando metrics-server para permitir TLS inseguro (entorno de pruebas)"
-        if kubectl patch deployment metrics-server -n kube-system --type='json' \
-            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'; then
-            log "DEBUG" "Metrics-server parcheado exitosamente"
-        else
-            log "WARN" "No se pudo parchear metrics-server, continuando..."
-        fi
+        safe_run kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 
         log "INFO" "Esperando a que metrics-server esté disponible"
         if kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system; then
@@ -285,34 +270,30 @@ install_metrics_server() {
 # ========================
 show_cluster_info() {
     log "DEBUG" "Mostrando información del cluster"
-    
+
     log "INFO" "=== Listing all Kind clusters ==="
-    kind get clusters
+    safe_run kind get clusters
 
     log "INFO" "=== Showing nodes and status ==="
-    kubectl get nodes -o wide
+    safe_run kubectl get nodes -o wide
 
     log "INFO" "=== Cluster info ==="
-    kubectl cluster-info
+    safe_run kubectl cluster-info
 
     log "INFO" "=== Listing namespaces ==="
-    kubectl get ns
+    safe_run kubectl get ns
 
     log "INFO" "=== Listing all pods in all namespaces ==="
-    kubectl get pods --all-namespaces -o wide
+    safe_run kubectl get pods --all-namespaces -o wide
 
     log "INFO" "=== Checking images on each node ==="
     for node in $(kind get nodes); do
         log "DEBUG" "Imágenes en nodo $node:"
-        docker exec $node crictl images
+        safe_run docker exec $node crictl images
     done
 
     log "INFO" "=== Current pod metrics ==="
-    if kubectl top pods --all-namespaces; then
-        log "DEBUG" "Métricas de pods obtenidas exitosamente"
-    else
-        log "WARN" "No se pudieron obtener métricas de pods"
-    fi
+    safe_run kubectl top pods --all-namespaces
 }
 
 # =============================================
@@ -323,9 +304,7 @@ deploy_scheduler() {
     log "INFO" "Iniciando despliegue del scheduler: $scheduler_type"
 
     log "DEBUG" "Eliminando despliegue previo del scheduler si existe"
-    if kubectl delete deployment my-scheduler -n kube-system --ignore-not-found; then
-        log "DEBUG" "Despliegue previo eliminado (si existía)"
-    fi
+    safe_run kubectl delete deployment my-scheduler -n kube-system --ignore-not-found
 
     log "INFO" "Aplicando configuración RBAC y Deployment del scheduler"
     if kubectl apply -f $RBAC_SCHEDULER; then
@@ -340,16 +319,16 @@ deploy_scheduler() {
         log "INFO" "Scheduler desplegado exitosamente"
     else
         log "ERROR" "Fallo en el despliegue del scheduler - mostrando diagnóstico"
-        
+
         log "ERROR" "=== Descripción del pod del scheduler ==="
-        kubectl describe pod -n kube-system -l app=my-scheduler
-        
+        safe_run kubectl describe pod -n kube-system -l app=my-scheduler
+
         log "ERROR" "=== Logs del scheduler ==="
-        kubectl logs -n kube-system -l app=my-scheduler --tail=50
-        
+        safe_run kubectl logs -n kube-system -l app=my-scheduler --tail=50
+
         log "ERROR" "=== Estado de los pods en kube-system ==="
-        kubectl get pods -n kube-system
-        
+        safe_run kubectl get pods -n kube-system
+
         exit 1
     fi
 }
@@ -363,15 +342,8 @@ main() {
 
     # Limpiar imágenes locales y contenedores detenidos
     log "INFO" "Limpiando imágenes y contenedores locales"
-    if docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE" >/dev/null 2>&1; then
-        log "DEBUG" "Imágenes limpiadas exitosamente"
-    else
-        log "DEBUG" "No había imágenes para limpiar o falló la limpieza"
-    fi
-    
-    if docker container prune -f; then
-        log "DEBUG" "Contenedores limpiados exitosamente"
-    fi
+    safe_run docker image rm -f "$CPU_IMAGE" "$RAM_IMAGE" "$SCHED_IMAGE"
+    safe_run docker container prune -f
 
     # Selección de variante de scheduler
     select_scheduler_variant "$1"
@@ -407,7 +379,7 @@ main() {
     # Cargamos módulos de métricas
     log "INFO" "Configurando métricas del cluster"
     install_metrics_server
-    
+
     log "DEBUG" "Mostrando estado actual del cluster"
     show_cluster_info
 
@@ -419,10 +391,10 @@ main() {
     # Ejecutar el script de benchmarking de pods
     SCHED_IMPL=${SCHED_IMPL:-polling}
     NUM_PODS=${NUM_PODS:-20}
-    
+
     log "INFO" "Iniciando tests de benchmarking con scheduler: $SCHED_IMPL, pods por tipo: $NUM_PODS"
     log "INFO" "=== LANZANDO TEST DE PODS EN PARALELO ==="
-    
+
     if ./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS"; then
         log "INFO" "Tests de pods ejecutados exitosamente"
     else

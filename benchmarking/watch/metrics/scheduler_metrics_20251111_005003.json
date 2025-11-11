@@ -1,0 +1,26 @@
+[1;33m[2025-11-10T23:52:51Z] [WARN] Comando 'jq -n --arg timestamp 2025-11-10T23:52:51Z --arg scheduler watch --argjson pods_per_type 20 --argjson pod_metrics [1;33m[2025-11-10T23:52:51Z] [WARN] Comando 'jq . + [[1;33m[2025-11-10T23:51:01Z] [WARN] Comando 'jq -n --arg pod_name test-basic-zsrfj --arg pod_type test-basic --argjson latency 5 --argjson pending_latency [0;34m[2025-11-10T23:50:51Z] [DEBUG] Calculando pending_running_latency para pod: test-basic-zsrfj[0m
+[0;34m[2025-11-10T23:50:52Z] [DEBUG] Pending_running_latency para test-basic-zsrfj: 0 segundos[0m
+0 --argjson pull_latency [0;34m[2025-11-10T23:50:52Z] [DEBUG] Calculando pull_start_latency para pod: test-basic-zsrfj[0m
+[0;34m[2025-11-10T23:50:52Z] [DEBUG] Pull_start_latency para test-basic-zsrfj: 2 segundos[0m
+2 --argjson cpu [0;34m[2025-11-10T23:50:52Z] --argjson mem [DEBUG] Calculando uso promedio de recursos del scheduler[0m --argjson list_ops [0;34m[2025-11-10T23:50:56Z] [DEBUG] Calculando list_ops para pod: test-basic-zsrfj[0m
+[0;34m[2025-11-10T23:50:59Z] [DEBUG] List_ops para test-basic-zsrfj: 0[0m
+0 --argjson retries [0;34m[2025-11-10T23:50:59Z] --argjson implicit_retries [DEBUG] --argjson events Calculando attempts y eventos para pod: test-basic-zsrfj[0m {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }' falló pero se ignora[0m]' falló pero se ignora[0m {
+            test_timestamp: $timestamp,
+            scheduler_implementation: $scheduler,
+            pods_per_type: $pods_per_type,
+            pod_metrics: $pod_metrics,
+            aggregate_metrics: {}
+        }' falló pero se ignora[0m

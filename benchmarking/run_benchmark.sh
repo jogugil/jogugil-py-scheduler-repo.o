@@ -50,10 +50,16 @@ echo -e "${NC}"
 
 log "INFO" "🚀 Iniciando benchmarking setup..."
 
-# EJECUTAR EL SETUP PASANDO LOS PARÁMETROS
+# EJECUTAR EL SETUP PASANDO LOS PARÁMETROS CON MANEJO SEGURO
 log "INFO" "Ejecutando: ./benchmarking_setup.sh $SCHED_IMPL $NUM_PODS"
-./benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"
 
-# Si llegamos aquí, todo fue exitoso
-log "SUCCESS" "Benchmarking completado exitosamente"
-echo -e "${GREEN}📄 Log completo en: $LOG_FILE${NC}"
+# Usar safe_run para comandos que pueden fallar de forma no crítica
+if safe_run ./benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"; then
+    log "SUCCESS" "Benchmarking completado exitosamente"
+    echo -e "${GREEN}📄 Log completo en: $LOG_FILE${NC}"
+else
+    local exit_code=$?
+    log "ERROR" "Benchmarking falló con código: $exit_code"
+    echo -e "${RED}❌ ERROR - Revisa el log: $LOG_FILE${NC}"
+    exit $exit_code
+fi

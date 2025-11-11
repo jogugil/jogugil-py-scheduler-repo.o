@@ -1,25 +1,117 @@
-[2025-11-10T19:47:06Z] [INFO] Parámetros recibidos: 
-[2025-11-10T19:47:06Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
-[2025-11-10T19:47:06Z] [INFO] 🚀 Iniciando benchmarking setup...
-[2025-11-10T19:47:06Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
-[2025-11-10T19:47:06Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
-[2025-11-10T19:47:06Z] [INFO] Limpiando imágenes y contenedores locales
-[2025-11-10T19:47:06Z] [DEBUG] Imágenes limpiadas exitosamente
-[2025-11-10T19:47:06Z] [ERROR] Falló en línea 67: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)
-[2025-11-10T19:47:06Z] [SUCCESS] Benchmarking completado exitosamente
-[2025-11-10T19:58:31Z] [INFO] Parámetros recibidos: 
-[2025-11-10T19:58:31Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
-[2025-11-10T19:58:31Z] [INFO] 🚀 Iniciando benchmarking setup...
-[2025-11-10T19:58:31Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
-[2025-11-10T19:58:31Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
-[2025-11-10T19:58:31Z] [INFO] Limpiando imágenes y contenedores locales
-[2025-11-10T19:58:31Z] [DEBUG] Imágenes limpiadas exitosamente
-[2025-11-10T19:58:31Z] [ERROR] Falló en línea 55: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)
-[2025-11-10T20:04:56Z] [INFO] Parámetros recibidos: 
-[2025-11-10T20:04:56Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
-[2025-11-10T20:04:56Z] [INFO] 🚀 Iniciando benchmarking setup...
-[2025-11-10T20:04:56Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
-[2025-11-10T20:04:56Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
-[2025-11-10T20:04:56Z] [INFO] Limpiando imágenes y contenedores locales
-[2025-11-10T20:04:56Z] [DEBUG] Imágenes limpiadas exitosamente
-[2025-11-10T20:04:56Z] [ERROR] Falló en línea 55: './benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"' (exit code: 0)
+[2025-11-11T00:44:02Z] [DEBUG] 📁 Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-11T00:44:02Z] [INFO] Parámetros recibidos: 
+[2025-11-11T00:44:02Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-11T00:44:02Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-11T00:44:02Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-11T00:44:02Z] [DEBUG] 📁 Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-11T00:44:02Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-11T00:44:02Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-11T00:44:02Z] [INFO] Scheduler seleccionado por parámetro: watch
+[2025-11-11T00:44:02Z] [INFO] Variante de scheduler seleccionada: watch
+[2025-11-11T00:44:02Z] [INFO] Copiando scheduler-watch desde ../variants/watch-skeleton/scheduler.py
+[2025-11-11T00:44:02Z] [DEBUG] Scheduler watch copiado exitosamente
+[2025-11-11T00:44:02Z] [INFO] Scheduler copiado exitosamente a ./scheduler.py
+[2025-11-11T00:44:02Z] [DEBUG] Copiando archivos de configuración al directorio actual
+[2025-11-11T00:44:02Z] [DEBUG] Archivos de configuración copiados exitosamente
+[2025-11-11T00:44:02Z] [INFO] Eliminando cluster existente sched-lab
+[2025-11-11T00:44:06Z] [INFO] Creando nuevo cluster sched-lab
+[2025-11-11T00:44:40Z] [INFO] Cluster sched-lab creado exitosamente
+[2025-11-11T00:44:40Z] [INFO] Esperando que nodo control-plane esté en estado Ready
+[2025-11-11T00:44:41Z] [INFO] Nodo control-plane está Ready y operativo
+[2025-11-11T00:44:41Z] [INFO] Limpiando namespace test-scheduler
+[2025-11-11T00:44:41Z] [INFO] Creando namespace test-scheduler
+[2025-11-11T00:44:41Z] [INFO] Namespace test-scheduler creado exitosamente
+[2025-11-11T00:44:41Z] [INFO] Construyendo y cargando imagen del scheduler personalizado
+[2025-11-11T00:44:41Z] [INFO] Iniciando construcción de imagen [my-py-scheduler:latest] desde directorio [./]
+[2025-11-11T00:44:46Z] [INFO] Imagen my-py-scheduler:latest construida exitosamente
+[2025-11-11T00:44:46Z] [INFO] Cargando imagen my-py-scheduler:latest en nodo control-plane: [sched-lab-control-plane]
+[2025-11-11T00:44:55Z] [INFO] Esperando imagen my-py-scheduler:latest en nodo sched-lab-control-plane
+[2025-11-11T00:44:55Z] [INFO] Imagen my-py-scheduler:latest cargada correctamente en nodo sched-lab-control-plane
+[2025-11-11T00:44:55Z] [INFO] Imagen my-py-scheduler:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-11T00:44:55Z] [INFO] Construyendo y cargando imágenes de prueba
+[2025-11-11T00:44:55Z] [INFO] Iniciando construcción de imagen [pause:3.9] desde directorio [./test-basic]
+[2025-11-11T00:44:56Z] [INFO] Imagen pause:3.9 construida exitosamente
+[2025-11-11T00:44:56Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker]
+[2025-11-11T00:44:57Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker
+[2025-11-11T00:44:57Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker
+[2025-11-11T00:44:57Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker2]
+[2025-11-11T00:44:57Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker2
+[2025-11-11T00:44:57Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker2
+[2025-11-11T00:44:57Z] [INFO] Imagen pause:3.9 cargada exitosamente en todos los nodos seleccionados
+[2025-11-11T00:44:57Z] [INFO] Iniciando construcción de imagen [nginx:latest] desde directorio [./nginx]
+[2025-11-11T00:44:58Z] [INFO] Imagen nginx:latest construida exitosamente
+[2025-11-11T00:44:58Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker]
+[2025-11-11T00:45:04Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker
+[2025-11-11T00:45:04Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-11T00:45:04Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker2]
+[2025-11-11T00:45:10Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker2
+[2025-11-11T00:45:10Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-11T00:45:10Z] [INFO] Imagen nginx:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-11T00:45:10Z] [INFO] Iniciando construcción de imagen [cpu-heavy:latest] desde directorio [./cpu-heavy]
+[2025-11-11T00:45:11Z] [INFO] Imagen cpu-heavy:latest construida exitosamente
+[2025-11-11T00:45:11Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-11T00:45:19Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker
+[2025-11-11T00:45:19Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-11T00:45:19Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-11T00:45:29Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker2
+[2025-11-11T00:45:29Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-11T00:45:29Z] [INFO] Imagen cpu-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-11T00:45:29Z] [INFO] Iniciando construcción de imagen [ram-heavy:latest] desde directorio [./ram-heavy]
+[2025-11-11T00:45:29Z] [INFO] Imagen ram-heavy:latest construida exitosamente
+[2025-11-11T00:45:29Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-11T00:45:33Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker
+[2025-11-11T00:45:33Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-11T00:45:33Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-11T00:45:36Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker2
+[2025-11-11T00:45:36Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-11T00:45:36Z] [INFO] Imagen ram-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-11T00:45:36Z] [INFO] Configurando métricas del cluster
+[2025-11-11T00:45:37Z] [INFO] Instalando metrics-server en el cluster
+[2025-11-11T00:45:37Z] [DEBUG] Metrics-server aplicado desde manifiesto oficial
+[2025-11-11T00:45:37Z] [DEBUG] Parcheando metrics-server para permitir TLS inseguro (entorno de pruebas)
+[2025-11-11T00:45:38Z] [INFO] Esperando a que metrics-server esté disponible
+[2025-11-11T00:46:09Z] [INFO] Metrics-server está disponible
+[2025-11-11T00:46:09Z] [INFO] Esperando 30 segundos para que metrics-server se estabilice
+[2025-11-11T00:46:40Z] [DEBUG] Mostrando estado actual del cluster
+[2025-11-11T00:46:40Z] [DEBUG] Mostrando información del cluster
+[2025-11-11T00:46:40Z] [INFO] === Listing all Kind clusters ===
+[2025-11-11T00:46:40Z] [INFO] === Showing nodes and status ===
+[2025-11-11T00:46:41Z] [INFO] === Cluster info ===
+[2025-11-11T00:46:41Z] [INFO] === Listing namespaces ===
+[2025-11-11T00:46:41Z] [INFO] === Listing all pods in all namespaces ===
+[2025-11-11T00:46:41Z] [INFO] === Checking images on each node ===
+[2025-11-11T00:46:41Z] [INFO] === Current pod metrics ===
+[2025-11-11T00:46:41Z] [INFO] === ENTORNO COMPLETO LISTO PARA TESTS ===
+[2025-11-11T00:46:41Z] [INFO] Iniciando despliegue del scheduler: watch
+[2025-11-11T00:46:41Z] [DEBUG] Eliminando despliegue previo del scheduler si existe
+[2025-11-11T00:46:42Z] [INFO] Aplicando configuración RBAC y Deployment del scheduler
+[2025-11-11T00:46:42Z] [DEBUG] Manifiestos RBAC aplicados exitosamente
+[2025-11-11T00:46:42Z] [INFO] Esperando a que el scheduler se despliegue correctamente (timeout: 120s)
+[2025-11-11T00:46:43Z] [INFO] Scheduler desplegado exitosamente
+[2025-11-11T00:46:43Z] [INFO] Iniciando tests de benchmarking con scheduler: watch, pods por tipo: 20
+[2025-11-11T00:46:43Z] [INFO] === LANZANDO TEST DE PODS EN PARALELO ===
+[2025-11-11T00:46:43Z] [DEBUG] 📁 Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-11T00:46:43Z] [INFO] === INICIO DE TESTS DE SCHEDULER ===
+[2025-11-11T00:46:43Z] [INFO] Scheduler: watch, Pods por tipo: 20, Máximo concurrente: 5
+[2025-11-11T00:46:43Z] [INFO] Inicializando test de scheduler: watch
+[2025-11-11T00:46:43Z] [INFO] Número de pods por tipo: 20
+[2025-11-11T00:46:43Z] [INFO] Máximo pods concurrentes: 5
+[2025-11-11T00:46:43Z] [INFO] Namespace: test-scheduler
+[2025-11-11T00:46:43Z] [DEBUG] Directorios creados: ./my-scheduler/metrics, ./watch/metrics, /tmp/pod_metrics_1180864
+[2025-11-11T00:46:43Z] [DEBUG] Archivo de resultados CSV inicializado: ./my-scheduler/metrics/results.csv
+[2025-11-11T00:46:43Z] [INFO] Iniciando ejecución paralela CONTROLADA
+[2025-11-11T00:46:43Z] [INFO] Total de pods a crear: 80
+[2025-11-11T00:46:43Z] [INFO] Máximo concurrente: 5
+[2025-11-11T00:48:07Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:10Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:10Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:11Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:13Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:13Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:13Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:14Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:15Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:15Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:15Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:15Z] [DEBUG] Ejecutando exit handler (código: 0)
+[2025-11-11T00:48:16Z] [DEBUG] Ejecutando exit handler (código: 0)

@@ -40,6 +40,7 @@ RBAC_PATH="../rbac-deploy.yaml"
 # Parametrop Debug y Métricas
 RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
 LOGOUT_DEBUG="log/bechmarking.log"
+METRICS_SERVER_URL="https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml"
 
 # Pods
 POD_TYPES=("cpu" "ram" "nginx" "basic")
@@ -237,34 +238,68 @@ select_scheduler_variant() {
 
 # ========================
 # Install metrics-server if needed
+# Me da problemas al bajarme la imagen del servidor de metricas.
 # ========================
-install_metrics_server() {
-    if ! kubectl get deployment metrics-server -n kube-system; then
-        log "INFO" "Instalando metrics-server en el cluster"
-        if kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml; then
-            log "DEBUG" "Metrics-server aplicado desde manifiesto oficial"
-        else
-            log "ERROR" "Fallo al aplicar metrics-server"
-            exit 1
-        fi
+install_metrics_server_old() {
+    METRICS_SERVER_URL="https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml"
 
-        log "DEBUG" "Parcheando metrics-server para permitir TLS inseguro (entorno de pruebas)"
-        safe_run kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+    echo "=== Comprobando si Metrics Server ya está instalado ==="
+    if ! kubectl get deployment metrics-server -n kube-system &>/dev/null; then
+        echo "=== Instalando Metrics Server ==="
+        kubectl apply -f "$METRICS_SERVER_URL"
 
-        log "INFO" "Esperando a que metrics-server esté disponible"
-        if kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system; then
-            log "INFO" "Metrics-server está disponible"
+        echo "=== Parcheando TLS inseguro ==="
+        kubectl patch deployment metrics-server -n kube-system --type='json' \
+            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+        echo "=== Esperando Metrics Server disponible (timeout 120s) ==="
+        if ! kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system &>/dev/null; then
+            echo "⚠️  Atención: Metrics Server no disponible después de 120s, continuando..."
         else
-            log "WARN" "Metrics-server no está disponible dentro del timeout, continuando..."
+            echo "✅ Metrics Server está disponible"
         fi
     else
-        log "DEBUG" "Metrics-server ya está instalado"
+        echo "=== Metrics Server ya está instalado ==="
     fi
 
-    log "INFO" "Esperando 30 segundos para que metrics-server se estabilice"
+    echo "=== Pausa de 30 segundos para estabilizar ==="
     sleep 30
 }
+install_metrics_server() {
+    METRICS_SERVER_URL="https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml"
+    METRICS_IMAGE="registry.k8s.io/metrics-server/metrics-server:v0.6.3"
 
+    echo "=== Comprobando si Metrics Server ya está instalado ==="
+    if ! kubectl get deployment metrics-server -n kube-system &>/dev/null; then
+        echo "=== Descargando imagen Metrics Server localmente ==="
+        docker pull "$METRICS_IMAGE"
+
+        echo "=== Cargando imagen Metrics Server en todos los nodos Kind ==="
+        for node in $(kind get nodes --name "$CLUSTER_NAME"); do
+            echo "=== Cargando imagen en $node ==="
+            kind load docker-image "$METRICS_IMAGE" --name "$CLUSTER_NAME" --nodes "$node"
+        done
+
+        echo "=== Aplicando manifiesto Metrics Server ==="
+        kubectl apply -f "$METRICS_SERVER_URL"
+
+        echo "=== Parcheando TLS inseguro ==="
+        kubectl patch deployment metrics-server -n kube-system --type='json' \
+            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+        echo "=== Esperando Metrics Server disponible (timeout 120s) ==="
+        if ! kubectl wait --for=condition=available --timeout=120s deployment/metrics-server -n kube-system &>/dev/null; then
+            echo "⚠️ Metrics Server no disponible después de 120s, continuando..."
+        else
+            echo "✅ Metrics Server está disponible"
+        fi
+    else
+        echo "=== Metrics Server ya está instalado ==="
+    fi
+
+    echo "=== Pausa de 30 segundos para estabilizar ==="
+    sleep 30
+}
 # ========================
 # Function to show cluster and images info
 # ========================

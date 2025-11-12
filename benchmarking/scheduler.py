@@ -29,12 +29,16 @@ def load_client(kubeconfig=None):
     return client.CoreV1Api()
 
 # Bind de pod a nodo
-def bind_pod(api, pod, node_name):
-    target = client.V1ObjectReference(api_version="v1", kind="Node", name=node_name)
-    metadata = client.V1ObjectMeta(name=pod.metadata.name)
-    body = client.V1Binding(target=target, metadata=metadata)
-    api.create_namespaced_binding(namespace=pod.metadata.namespace, body=body)
-    print(f"[bind] Pod {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
+def bind_pod(api: client.CoreV1Api, pod, node_name: str):
+    print(f"[scheduler] Attempting bind: {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
+    try:
+        target = client.V1ObjectReference(kind="Node", name=node_name)
+        meta = client.V1ObjectMeta(name=pod.metadata.name)
+        body = client.V1Binding(target=target, metadata=meta)
+        api.create_namespaced_binding(pod.metadata.namespace, body, _preload_content=False)
+        print(f"[scheduler] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}")
+    except client.rest.ApiException as e:
+        print(f"[scheduler] Failed binding pod {pod.metadata.name}: {e}")
 
 # Elegir nodo según menos carga
 def choose_node(api, pod):

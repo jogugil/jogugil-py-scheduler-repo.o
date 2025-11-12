@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # ========================================
 # CARGAR LOGGING Y MANEJO DE ERRORES
@@ -11,17 +12,20 @@ enable_error_trapping
 # ========================================
 SCHED_IMPL=${1:-polling}
 NUM_PODS=${2:-20}
-MAX_CONCURRENT_PODS=${3:-5}  # Límite de pods concurrentes
+MAX_CONCURRENT_PODS=${3:-5}
 NAMESPACE="test-scheduler"
 SCHEDULER_NAME="my-scheduler"
-RESULTS_DIR="./${SCHED_IMPL}/metrics"
-TEMP_DIR="/tmp/pod_metrics_$$"
-RESULTS_JSON="${RESULTS_DIR}/scheduler_metrics_$(date +%Y%m%d_%H%M%S).json"
-METRICS_DIR="./${SCHEDULER_NAME}/metrics"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Estructura de directorios organizada por scheduler
+BASE_DIR="./${SCHED_IMPL}"
+METRICS_DIR="${BASE_DIR}/metrics"
+TEMP_DIR="${BASE_DIR}/temp_${TIMESTAMP}"
+RESULTS_JSON="${METRICS_DIR}/scheduler_metrics_${TIMESTAMP}.json"
 POD_TYPES=("cpu-heavy" "ram-heavy" "nginx" "test-basic")
 
 # Variables para control de ejecución
-declare -a CURRENT_PODS=()
+declare -A CURRENT_PODS=()
 
 # ========================================
 # FUNCIÓN SAFE_RUN
@@ -37,7 +41,7 @@ safe_run() {
 # Registrar un pod activo
 register_pod() {
     local pod_name=$1
-    CURRENT_PODS+=("$pod_name")
+    CURRENT_PODS["$pod_name"]=1
     log "DEBUG" "Pod registrado: $pod_name (total: ${#CURRENT_PODS[@]})"
 }
 
@@ -45,7 +49,7 @@ register_pod() {
 cleanup_active_pods() {
     if [ ${#CURRENT_PODS[@]} -gt 0 ]; then
         log "INFO" "Limpiando ${#CURRENT_PODS[@]} pods activos..."
-        for pod in "${CURRENT_PODS[@]}"; do
+        for pod in "${!CURRENT_PODS[@]}"; do
             log "DEBUG" "Eliminando pod: $pod"
             safe_run kubectl delete pod "$pod" -n "$NAMESPACE" --ignore-not-found=true --force --grace-period=0
         done
@@ -53,29 +57,11 @@ cleanup_active_pods() {
     fi
 }
 
-# ========================================
-# CONTROL DE CONCURRENCIA CON SEMÁFOROS
-# ========================================
-
-# Semáforo simple usando FIFO
-init_semaphore() {
-    local max_jobs=$1
-    mkfifo /tmp/scheduler_semaphore.$$
-    for ((i=0; i<max_jobs; i++)); do
-        echo > /tmp/scheduler_semaphore.$$
-    done
-}
-
-acquire_semaphore() {
-    read -u 9
-}
-
-release_semaphore() {
-    echo > /tmp/scheduler_semaphore.$$
-}
-
-cleanup_semaphore() {
-    rm -f /tmp/scheduler_semaphore.$$
+# Limpiar namespace
+clean_namespace() {
+    log "INFO" "Limpiando namespace $NAMESPACE"
+    safe_run kubectl delete pods --all -n "$NAMESPACE" --ignore-not-found=true --wait=false
+    sleep 2
 }
 
 # ========================================
@@ -87,12 +73,15 @@ initialize_test() {
     log "INFO" "Máximo pods concurrentes: $MAX_CONCURRENT_PODS"
     log "INFO" "Namespace: $NAMESPACE"
 
-    mkdir -p "$METRICS_DIR" "$RESULTS_DIR" "$TEMP_DIR"
-    log "DEBUG" "Directorios creados: $METRICS_DIR, $RESULTS_DIR, $TEMP_DIR"
+    # Limpieza de temporales antiguos (>3 días)
+    find "$BASE_DIR" -type d -name 'temp_*' -mtime +3 -exec rm -rf {} \; 2>/dev/null || true
 
-    RESULTS_FILE="$METRICS_DIR/results.csv"
-    echo "timestamp,pod_name,latency,latency_pending_running,pull_start_latency,cpu_usage,mem_usage,list_ops,retries,implicit_retries,events" > "$RESULTS_FILE"
-    log "DEBUG" "Archivo de resultados CSV inicializado: $RESULTS_FILE"
+    # Crear estructura de directorios organizada por scheduler
+    mkdir -p "$BASE_DIR" "$METRICS_DIR" "$TEMP_DIR"
+    log "DEBUG" "Directorios creados para scheduler '$SCHED_IMPL':"
+    log "DEBUG" "  - Base: $BASE_DIR"
+    log "DEBUG" "  - Métricas: $METRICS_DIR"
+    log "DEBUG" "  - Temporal: $TEMP_DIR"
 }
 
 # ========================================
@@ -227,44 +216,6 @@ get_scheduler_attempts_events() {
     fi
 
     echo "$retries $implicit_retries $events"
-}
-
-# Función mejorada para métricas del scheduler
-get_scheduler_detailed_metrics() {
-    local scheduler_pod=$(safe_run kubectl -n kube-system get pods -l app=$SCHEDULER_NAME -o name | head -1 | sed 's#pod/##')
-
-    if [[ -z "$scheduler_pod" ]]; then
-        log "WARN" "No se encontró el pod del scheduler"
-        echo "0 0 0 0 false"
-        return
-    fi
-
-    local pod_info=$(kubectl -n kube-system get pod "$scheduler_pod" -o json 2>/dev/null || echo "")
-
-    if [[ -n "$pod_info" ]]; then
-        local cpu=$(echo "$pod_info" | jq -r '.spec.containers[0].resources.requests.cpu // "0m"' | sed 's/m//')
-        local mem=$(echo "$pod_info" | jq -r '.spec.containers[0].resources.requests.memory // "0Mi"' | sed 's/Mi//')
-        local restarts=$(echo "$pod_info" | jq -r '.status.containerStatuses[0].restartCount // 0')
-        local ready=$(echo "$pod_info" | jq -r '.status.containerStatuses[0].ready // "false"')
-        local creation_timestamp=$(echo "$pod_info" | jq -r '.metadata.creationTimestamp')
-        local age=$(date -d "$creation_timestamp" +%s 2>/dev/null || echo "0")
-        local now=$(date +%s)
-        local pod_age=$((now - age))
-
-        echo "$cpu $mem $restarts $pod_age $ready"
-    else
-        echo "0 0 0 0 false"
-    fi
-}
-
-record_metrics() {
-    local pod_name=$1 latency=$2 latency_pending_running=$3 pull_start_latency=$4 cpu=$5 mem=$6 \
-          list_ops=$7 retries=$8 implicit_retries=$9 events=${10}
-
-    local timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    echo "$timestamp,$pod_name,$latency,$latency_pending_running,$pull_start_latency,$cpu,$mem,$list_ops,$retries,$implicit_retries,$events" >> "$RESULTS_FILE"
-
-    log "DEBUG" "Métricas registradas en CSV para $pod_name: latency=${latency}s, cpu=${cpu}, mem=${mem}"
 }
 
 # ========================================
@@ -409,186 +360,196 @@ measure_and_save_pod_metrics() {
         # Registrar métricas
         log "DEBUG" "Registrando métricas para $pod_name"
         write_pod_metrics_to_temp "$pod_name" "$pod_type" "$latency" "$pending_latency" "$pull_latency" "$cpu" "$mem" "$list_ops" "$retries" "$implicit_retries" "$events"
-        record_metrics "$pod_name" "$latency" "$pending_latency" "$pull_latency" "$cpu" "$mem" "$list_ops" "$retries" "$implicit_retries" "$events"
     else
         log "WARN" "Pod $pod_name no existe, omitiendo métricas detalladas"
         # Registrar métricas básicas
         write_pod_metrics_to_temp "$pod_name" "$pod_type" "$latency" "N/A" "N/A" "0" "0" "0" "0" "0" "0"
-        record_metrics "$pod_name" "$latency" "N/A" "N/A" "0" "0" "0" "0" "0" "0"
     fi
 
     # Limpiar el pod después de medir
     log "DEBUG" "Eliminando pod $pod_name después de la medición"
     safe_run kubectl delete pod "$pod_name" -n "$namespace" --ignore-not-found=true --wait=false
 
+    # Eliminar del registro
+    unset CURRENT_PODS["$pod_name"]
+
     log "INFO" "Medición completada para pod: $pod_name"
     return 0
 }
 
 # ========================================
-# EJECUCIÓN PARALELA CONTROLADA
+# EJECUCIÓN PARALELA MEJORADA
 # ========================================
 
 run_all_tests_parallel() {
-    log "INFO" "Iniciando ejecución paralela CONTROLADA"
-    log "INFO" "Total de pods a crear: $((${#POD_TYPES[@]} * NUM_PODS))"
-    log "INFO" "Máximo concurrente: $MAX_CONCURRENT_PODS"
-
-    # Inicializar semáforo
-    init_semaphore $MAX_CONCURRENT_PODS
-    exec 9<> /tmp/scheduler_semaphore.$$
-
-    declare -a pids=()
-    local total_pods=0
-    local completed_pods=0
-
+    log "INFO" "Ejecución paralela iniciada (máximo $MAX_CONCURRENT_PODS pods)"
+    local total_jobs=0
+    
     for pod_type in "${POD_TYPES[@]}"; do
-        log "INFO" "Procesando tipo de pod: $pod_type"
         for i in $(seq 1 "$NUM_PODS"); do
-            local base_pod_name="${pod_type}-pod-${i}"
-            local yaml_file="./${pod_type}/${pod_type}-pod.yaml"
-
-            if [[ ! -f "$yaml_file" ]]; then
-                log "ERROR" "Archivo YAML no encontrado: $yaml_file"
-                continue
-            fi
-
-            # Adquirir semáforo (control de concurrencia)
-            acquire_semaphore
-
-            log "DEBUG" "Programando pod: $base_pod_name"
             (
-                # Esta sub-shell se ejecuta con el semáforo adquirido
+                base_pod_name="${pod_type}-pod-${i}"
+                yaml_file="./${pod_type}/${pod_type}-pod.yaml"
+                
+                # Verificar que el YAML existe
+                if [[ ! -f "$yaml_file" ]]; then
+                    log "ERROR" "Archivo YAML no encontrado: $yaml_file"
+                    exit 1
+                fi
+                
+                log "DEBUG" "Iniciando trabajo para pod: $base_pod_name"
                 measure_and_save_pod_metrics "$base_pod_name" "$pod_type" "$yaml_file" "$NAMESPACE"
-                release_semaphore
             ) &
+            total_jobs=$((total_jobs + 1))
             
-            local pid=$!
-            pids+=($pid)
-            register_background_pid $pid
-            total_pods=$((total_pods + 1))
-
-            log "DEBUG" "Pod $base_pod_name lanzado (PID: $pid) - Total activos: ${#pids[@]}"
-            
-            # Pequeña pausa para evitar saturación
-            sleep 1
+            # Control de concurrencia
+            while [ "$(jobs -rp | wc -l)" -ge "$MAX_CONCURRENT_PODS" ]; do
+                sleep 2
+            done
         done
     done
-
-    log "INFO" "Esperando a que completen $total_pods procesos..."
     
-    # Esperar a todos los procesos
-    for pid in "${pids[@]}"; do
-        if wait "$pid" 2>/dev/null; then
-            completed_pods=$((completed_pods + 1))
-            log "DEBUG" "Proceso $pid completado ($completed_pods/$total_pods)"
-        else
-            local wait_status=$?
-            completed_pods=$((completed_pods + 1))
-            log "WARN" "Proceso $pid terminó con error ($completed_pods/$total_pods, status: $wait_status)"
-        fi
-    done
-
-    # Limpiar semáforo
-    exec 9>&-
-    cleanup_semaphore
-
-    log "INFO" "Ejecución paralela completada: $completed_pods/$total_pods pods procesados"
+    # Esperar a que todos los trabajos terminen
+    wait
+    log "INFO" "Ejecución paralela completada. Total de trabajos: $total_jobs"
 }
 
 # ========================================
-# CONSOLIDACIÓN Y JSON
+# CONSOLIDACIÓN Y GENERACIÓN DE REPORTES
 # ========================================
 
-consolidate_metrics_with_jq() {
-    log "INFO" "Iniciando consolidación de métricas en JSON"
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local json_array="[]"
+summarize_results() {
+    log "INFO" "Generando resumen global de métricas..."
+    
     local temp_files_count=0
-
     for temp_file in "$TEMP_DIR"/*.json; do
         if [[ -f "$temp_file" ]]; then
-            json_array=$(echo "$json_array" | safe_run jq ". + [$(cat "$temp_file")]")
             temp_files_count=$((temp_files_count + 1))
         fi
     done
 
-    log "DEBUG" "Procesados $temp_files_count archivos temporales"
+    log "DEBUG" "Encontrados $temp_files_count archivos temporales para consolidar"
 
-    safe_run jq -n \
-        --arg timestamp "$timestamp" \
+    if [ "$temp_files_count" -eq 0 ]; then
+        log "WARN" "No se encontraron archivos temporales para consolidar"
+        return 1
+    fi
+
+    # Consolidar todos los JSONs en uno
+    jq -s '.' "${TEMP_DIR}"/*.json > "${RESULTS_JSON}.tmp"
+    
+    # Crear JSON final con estructura completa
+    jq -n \
+        --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
         --arg scheduler "$SCHED_IMPL" \
         --argjson pods_per_type "$NUM_PODS" \
         --argjson max_concurrent "$MAX_CONCURRENT_PODS" \
-        --argjson pod_metrics "$json_array" \
+        --argjson pod_metrics "$(cat "${RESULTS_JSON}.tmp")" \
         '{
             test_timestamp: $timestamp,
             scheduler_implementation: $scheduler,
             pods_per_type: $pods_per_type,
             max_concurrent_pods: $max_concurrent,
             pod_metrics: $pod_metrics,
-            aggregate_metrics: {}
+            aggregate_metrics: (
+                $pod_metrics | 
+                {
+                    total_pods: length,
+                    avg_scheduling_latency: (map(.scheduling_latency_seconds) | add / length),
+                    avg_pending_running_latency: (map(.latency_pending_running_seconds) | add / length),
+                    avg_pull_start_latency: (map(.pull_start_latency_seconds) | add / length),
+                    avg_scheduler_cpu: (map(.scheduler_cpu_millicores) | add / length),
+                    avg_scheduler_memory: (map(.scheduler_memory_mib) | add / length),
+                    total_list_ops: (map(.list_ops) | add),
+                    total_retries: (map(.retries) | add),
+                    total_implicit_retries: (map(.implicit_retries) | add),
+                    total_events: (map(.events) | add)
+                }
+            )
         }' > "$RESULTS_JSON"
 
-    if [[ $? -eq 0 ]]; then
-        log "INFO" "JSON final generado exitosamente: $RESULTS_JSON"
-        log "DEBUG" "Tamaño del JSON: $(wc -c < "$RESULTS_JSON") bytes, $temp_files_count pods registrados"
-    else
-        log "ERROR" "Error al generar JSON final"
-        return 1
-    fi
+    # Limpiar temporal
+    rm -f "${RESULTS_JSON}.tmp"
+    
+    log "INFO" "Archivo combinado: ${RESULTS_JSON}"
 }
 
-# ========================================
-# CÁLCULO DE MEDIAS
-# ========================================
-
-calculate_metrics_means() {
-    log "INFO" "Calculando promedios de métricas desde CSV"
-
-    if [[ ! -f "$RESULTS_FILE" ]]; then
-        log "ERROR" "Archivo de resultados CSV no encontrado: $RESULTS_FILE"
+generate_metrics_files() {
+    log "INFO" "Generando archivos específicos de métricas..."
+    
+    if [[ ! -f "$RESULTS_JSON" ]]; then
+        log "ERROR" "No se encuentra el JSON consolidado: $RESULTS_JSON"
         return 1
     fi
-
-    local total_lines=$(wc -l < "$RESULTS_FILE" | tr -d ' ')
-    if [[ $total_lines -le 1 ]]; then
-        log "WARN" "No hay suficientes datos en el CSV para calcular promedios (solo $total_lines líneas)"
-        return 0
-    fi
-
-    log "INFO" "Procesando $((total_lines - 1)) registros de métricas"
-
-    awk -F, '
-    NR>1 {
-        count++;
-        sum_latency+=$3;
-        sum_pending+=$4;
-        sum_pull+=$5;
-        sum_cpu+=$6;
-        sum_mem+=$7;
-        sum_list+=$8;
-        sum_retries+=$9;
-        sum_implicit+=$10;
-        sum_events+=$11
-    }
-    END {
-        if(count>0){
-            print "=== RESUMEN DE MÉTRICAS ==="
-            print "Total de pods procesados: " count
-            print "Promedio Latencia: " sum_latency/count " segundos"
-            print "Promedio Pending->Running: " sum_pending/count " segundos"
-            print "Promedio Pull->Start: " sum_pull/count " segundos"
-            print "Promedio CPU: " sum_cpu/count " millicores"
-            print "Promedio MEM: " sum_mem/count " MiB"
-            print "Promedio List Ops: " sum_list/count
-            print "Promedio Retries: " sum_retries/count
-            print "Promedio Implicit Retries: " sum_implicit/count
-            print "Promedio Eventos: " sum_events/count
-        } else {
-            print "No hay métricas para calcular promedio"
+    
+    # 1. Archivo de métricas de scheduling
+    local metrics_file="${METRICS_DIR}/scheduling_metrics_${TIMESTAMP}.json"
+    jq '{
+        scheduler: .scheduler_implementation,
+        timestamp: .test_timestamp,
+        scheduling_metrics: .aggregate_metrics
+    }' "$RESULTS_JSON" > "$metrics_file"
+    log "INFO" "Métricas de scheduling guardadas en: $metrics_file"
+    
+    # 2. Archivo de información del cluster (métricas por pod)
+    local cluster_info_file="${METRICS_DIR}/cluster_pod_metrics_${TIMESTAMP}.json"
+    jq '{
+        scheduler: .scheduler_implementation,
+        timestamp: .test_timestamp,
+        pod_metrics: .pod_metrics
+    }' "$RESULTS_JSON" > "$cluster_info_file"
+    log "INFO" "Información del cluster guardada en: $cluster_info_file"
+    
+    # 3. Archivo comparativo para diferentes schedulers
+    local comparison_file="${METRICS_DIR}/scheduler_comparison_${TIMESTAMP}.json"
+    jq '{
+        scheduler_type: .scheduler_implementation,
+        test_configuration: {
+            pods_per_type: .pods_per_type,
+            max_concurrent: .max_concurrent_pods,
+            total_pods: .aggregate_metrics.total_pods
+        },
+        performance_metrics: {
+            avg_scheduling_latency: .aggregate_metrics.avg_scheduling_latency,
+            avg_pending_running_latency: .aggregate_metrics.avg_pending_running_latency,
+            avg_pull_start_latency: .aggregate_metrics.avg_pull_start_latency,
+            scheduler_resource_usage: {
+                cpu: .aggregate_metrics.avg_scheduler_cpu,
+                memory: .aggregate_metrics.avg_scheduler_memory
+            },
+            efficiency_metrics: {
+                list_ops: .aggregate_metrics.total_list_ops,
+                retries: .aggregate_metrics.total_retries,
+                implicit_retries: .aggregate_metrics.total_implicit_retries,
+                events: .aggregate_metrics.total_events
+            }
         }
-    }' "$RESULTS_FILE"
+    }' "$RESULTS_JSON" > "$comparison_file"
+    log "INFO" "Datos comparativos guardados en: $comparison_file"
+    
+    # 4. Resumen en texto plano
+    local summary_file="${METRICS_DIR}/test_summary_${TIMESTAMP}.txt"
+    {
+        echo "=== RESUMEN DE PRUEBAS DE SCHEDULER ==="
+        echo "Scheduler: $SCHED_IMPL"
+        echo "Fecha: $(date)"
+        echo "Pods por tipo: $NUM_PODS"
+        echo "Máximo concurrente: $MAX_CONCURRENT_PODS"
+        echo "Directorio de resultados: $BASE_DIR"
+        echo ""
+        echo "=== MÉTRICAS AGREGADAS ==="
+        jq -r '"Total pods: \(.aggregate_metrics.total_pods)
+Latencia promedio scheduling: \(.aggregate_metrics.avg_scheduling_latency) segundos
+Latencia promedio pending-running: \(.aggregate_metrics.avg_pending_running_latency) segundos  
+Latencia promedio pull-start: \(.aggregate_metrics.avg_pull_start_latency) segundos
+CPU promedio scheduler: \(.aggregate_metrics.avg_scheduler_cpu) millicores
+MEM promedio scheduler: \(.aggregate_metrics.avg_scheduler_memory) MiB
+Total list operations: \(.aggregate_metrics.total_list_ops)
+Total retries: \(.aggregate_metrics.total_retries)
+Total implicit retries: \(.aggregate_metrics.total_implicit_retries)
+Total events: \(.aggregate_metrics.total_events)"' "$RESULTS_JSON"
+    } > "$summary_file"
+    log "INFO" "Resumen guardado en: $summary_file"
 }
 
 # ========================================
@@ -601,15 +562,15 @@ cleanup() {
     # 1. Limpiar pods activos
     cleanup_active_pods
 
-    # 2. Limpiar directorio temporal
-    if [[ -d "$TEMP_DIR" ]]; then
+    # 2. Limpiar directorio temporal (excepto si estamos en medio de una ejecución)
+    if [[ -d "$TEMP_DIR" && "${PRESERVE_TEMP:-false}" != "true" ]]; then
         safe_run rm -rf "$TEMP_DIR"
         log "DEBUG" "Directorio temporal eliminado: $TEMP_DIR"
     fi
 
     # 3. Limpieza adicional de Kubernetes
     log "DEBUG" "Limpieza final de recursos de Kubernetes"
-    safe_run kubectl delete --all pods --namespace "$NAMESPACE" --ignore-not-found=true
+    safe_run kubectl delete --all pods --namespace "$NAMESPACE" --ignore-not-found=true --wait=false
 }
 
 # ========================================
@@ -626,18 +587,30 @@ main() {
     # Inicializar test
     initialize_test
 
+    # Limpiar namespace antes de empezar
+    clean_namespace
+
     # Ejecutar tests en paralelo
     run_all_tests_parallel
 
-    # Calcular y mostrar promedios
-    calculate_metrics_means
-
-    # Consolidar métricas en JSON
-    consolidate_metrics_with_jq
-
-    log "INFO" "=== TESTS DE SCHEDULER COMPLETADOS EXITOSAMENTE ==="
-    log "INFO" "Resultados: $RESULTS_FILE"
-    log "INFO" "Métricas consolidadas: $RESULTS_JSON"
+    # Consolidar métricas y generar reportes
+    if summarize_results; then
+        generate_metrics_files
+        log "SUCCESS" "=== TESTS COMPLETADOS EXITOSAMENTE ==="
+        log "INFO" "Métricas consolidadas: $RESULTS_JSON"
+        log "INFO" "Todos los archivos guardados en: $BASE_DIR"
+        log "INFO" "Estructura de directorios:"
+        log "INFO" "  📁 $BASE_DIR/"
+        log "INFO" "  └── 📁 metrics/"
+        log "INFO" "      ├── 📄 scheduler_metrics_${TIMESTAMP}.json"
+        log "INFO" "      ├── 📄 scheduling_metrics_${TIMESTAMP}.json"
+        log "INFO" "      ├── 📄 cluster_pod_metrics_${TIMESTAMP}.json"
+        log "INFO" "      ├── 📄 scheduler_comparison_${TIMESTAMP}.json"
+        log "INFO" "      └── 📄 test_summary_${TIMESTAMP}.txt"
+    else
+        log "ERROR" "Error en la consolidación de métricas"
+        return 1
+    fi
 }
 
 # Ejecutar función principal

@@ -162,7 +162,7 @@ kubectl logs -n kube-system -l app=my-scheduler
 kubectl get pods -n test-scheduler -o yaml | grep schedulerName
 ```
 ### 4. Monitoreo de Eventos
-Eventos del Namespace
+* Eventos del Namespace
 
 ```bash
 # Verificar eventos en el namespace del proyecto
@@ -172,7 +172,7 @@ kubectl get events -n test-scheduler
 kubectl get events --all-namespaces
 ```
 ### 5. Gestión de Recursos y Métricas
-*Métricas de Recursos
+* Métricas de Recursos
 ```bash
 # Verificar uso de recursos en nodos
 kubectl top nodes

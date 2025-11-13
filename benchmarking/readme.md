@@ -89,10 +89,10 @@ AÜN EN DESARROLLO Y PRUEBAS!!!!
 
 
 
-#Glosario de Comandos Kubernetes para el Proyecto
+# Glosario de Comandos Kubernetes para el Proyecto
 Este glosario proporciona una referencia rápida para todas las operaciones de monitoreo y troubleshooting necesarias en el proyecto de Kubernetes.
-##Índice de Comandos
-###1. Verificación del Estado del Cluster
+## Índice de Comandos
+### 1. Verificación del Estado del Cluster
 
 * Nodos
 ```bash
@@ -109,7 +109,7 @@ kubectl cluster-info dump
 kubectl api-resources
 ```
 
-###2. Gestión y Monitoreo de Pods
+### 2. Gestión y Monitoreo de Pods
 * Pods en Todos los Namespaces
 ```bash
 # Listar todos los pods del cluster
@@ -137,7 +137,7 @@ kubectl get pods -n test-scheduler --field-selector=status.phase=Succeeded
 kubectl get pods -n test-scheduler --field-selector=status.phase=Unknown
 ```
 
-###3. Scheduler Personalizado
+### 3. Scheduler Personalizado
 * Verificación del Scheduler
 ```bash
 # Verificar los pods del scheduler personalizado
@@ -149,7 +149,7 @@ kubectl logs -n kube-system -l app=my-scheduler
 # Verificar la configuración del scheduler en los pods
 kubectl get pods -n test-scheduler -o yaml | grep schedulerName
 ```
-###4. Monitoreo de Eventos
+### 4. Monitoreo de Eventos
 Eventos del Namespace
 
 ```bash
@@ -159,7 +159,7 @@ kubectl get events -n test-scheduler
 # Verificar eventos a nivel de todo el cluster
 kubectl get events --all-namespaces
 ```
-###5. Gestión de Recursos y Métricas
+### 5. Gestión de Recursos y Métricas
 *Métricas de Recursos
 ```bash
 # Verificar uso de recursos en nodos
@@ -182,7 +182,7 @@ kubectl get resourcequotas --all-namespaces
 # Verificar límites en pods específicos
 kubectl describe pod -n test-scheduler <pod-name>
 ```
-###6. Componentes del Sistema
+### 6. Componentes del Sistema
 * DaemonSets y Deployments
 ```bash
 # Verificar DaemonSets y Deployments en kube-system
@@ -193,7 +193,7 @@ kubectl get daemonsets,deployments -n kube-system
 # Verificar servicios en todos los namespaces
 kubectl get services --all-namespaces
 ```
-###7. Almacenamiento
+### 7. Almacenamiento
 * Volúmenes Persistentes
 ```bash
 # Verificar Persistent Volumes y Claims
@@ -202,7 +202,7 @@ kubectl get pv,pvc --all-namespaces
 # Verificar Storage Classes
 kubectl get storageclass
 ```
-###8. Redes y Seguridad
+### 8. Redes y Seguridad
 * Network Policies
 ```bash
 # Verificar políticas de red
@@ -211,7 +211,7 @@ kubectl get networkpolicies --all-namespaces
 # Verificar definiciones de red
 kubectl get netattdefs --all-namespaces
 ```
-###9. Logs y Depuración
+### 9. Logs y Depuración
 * Logs de Pods
 ```bash
 # Verificar logs de pods específicos

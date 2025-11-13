@@ -1,0 +1,86 @@
+[2025-11-13T00:57:21Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-13T00:57:21Z] [INFO] Fecha: 2025-11-13T00:57:21Z
+[2025-11-13T00:57:21Z] [INFO] Parámetros recibidos: 
+[2025-11-13T00:57:21Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-13T00:57:21Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-13T00:57:21Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-13T00:57:21Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T00:57:21Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-13T00:57:21Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-13T00:57:21Z] [INFO] 🔐 CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-13T00:57:21Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: docker image rm -f cpu-heavy:latest ram-heavy:latest my-py-scheduler:latest
+[2025-11-13T00:57:21Z] [DEBUG] Comando exitoso: Limpiar imágenes locales
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: docker container prune -f
+[2025-11-13T00:57:21Z] [DEBUG] Comando exitoso: Limpiar contenedores
+[2025-11-13T00:57:21Z] [INFO] Scheduler seleccionado por parámetro: watch
+[2025-11-13T00:57:21Z] [INFO] Variante de scheduler seleccionada: watch
+[2025-11-13T00:57:21Z] [INFO] 🔐 CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-13T00:57:21Z] [INFO] Copiando scheduler-watch desde ../variants/watch-skeleton/scheduler.py
+[2025-11-13T00:57:21Z] [DEBUG] Scheduler watch copiado exitosamente
+[2025-11-13T00:57:21Z] [INFO] Scheduler copiado exitosamente a ./scheduler.py
+[2025-11-13T00:57:21Z] [INFO] Copiando archivos de configuración al directorio actual
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: cp ../Dockerfile ./Dockerfile
+[2025-11-13T00:57:21Z] [DEBUG] Comando exitoso: Copiar Dockerfile
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: cp ../requirements.txt ./requirements.txt
+[2025-11-13T00:57:21Z] [DEBUG] Comando exitoso: Copiar requirements
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: cp ../rbac-deploy.yaml ./rbac-deploy.yaml
+[2025-11-13T00:57:21Z] [DEBUG] Comando exitoso: Copiar RBAC
+[2025-11-13T00:57:21Z] [INFO] 🔐 CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-13T00:57:21Z] [INFO] Eliminando cluster existente sched-lab
+[2025-11-13T00:57:21Z] [DEBUG] Ejecutando: kind delete cluster --name sched-lab
+[2025-11-13T00:57:25Z] [DEBUG] Comando exitoso: Eliminar cluster existente
+[2025-11-13T00:57:25Z] [INFO] Creando nuevo cluster sched-lab
+[2025-11-13T00:57:25Z] [DEBUG] Ejecutando: kind create cluster --name sched-lab --config kind-cluster.yaml
+[2025-11-13T00:58:01Z] [DEBUG] Comando exitoso: Crear cluster Kind
+[2025-11-13T00:58:01Z] [INFO] Cluster sched-lab creado exitosamente
+[2025-11-13T00:58:01Z] [INFO] Esperando que nodo control-plane esté en estado Ready
+[2025-11-13T00:58:01Z] [INFO] Nodo control-plane está Ready y operativo
+[2025-11-13T00:58:01Z] [INFO] 🔐 CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-13T00:58:01Z] [DEBUG] 📝 Operación registrada: create_cluster -> kind-cluster
+[2025-11-13T00:58:01Z] [INFO] 🔐 CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-13T00:58:01Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T00:58:01Z] [DEBUG] Comando exitoso: Limpiar pods del namespace
+[2025-11-13T00:58:01Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T00:58:01Z] [DEBUG] Comando exitoso: Limpiar deployments del namespace
+[2025-11-13T00:58:02Z] [INFO] Creando namespace test-scheduler
+[2025-11-13T00:58:02Z] [DEBUG] Ejecutando: kubectl create namespace test-scheduler
+[2025-11-13T00:58:02Z] [DEBUG] Comando exitoso: Crear namespace
+[2025-11-13T00:58:02Z] [INFO] 🔐 CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-13T00:58:02Z] [DEBUG] 📝 Operación registrada: create_namespace -> test-scheduler
+[2025-11-13T00:58:02Z] [INFO] Construyendo y cargando imagen del scheduler personalizado
+[2025-11-13T00:58:02Z] [ERROR] Fallo al cargar imagen del scheduler
+[2025-11-13T00:58:02Z] [ERROR] ❌ ERROR en línea 523: 'return 1' (code: 1)
+[2025-11-13T00:58:02Z] [ERROR] Checkpoint actual: namespace_cleaned
+[2025-11-13T00:58:02Z] [INFO] 🔄 Iniciando rollback al checkpoint: namespace_cleaned
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T00:58:02Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-13T00:58:02Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-13T00:58:02Z] [WARN] Checkpoint desconocido: namespace_cleaned, limpieza general
+[2025-11-13T00:58:02Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T00:58:02Z] [ERROR] Script terminado con error: 1
+[2025-11-13T00:58:02Z] [INFO] 🔄 Iniciando rollback al checkpoint: namespace_cleaned
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T00:58:02Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-13T00:58:02Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-13T00:58:02Z] [WARN] Checkpoint desconocido: namespace_cleaned, limpieza general
+[2025-11-13T00:58:02Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T00:58:02Z] [WARN] Comando falló (1): ./benchmarking_setup.sh watch 20
+[2025-11-13T00:58:02Z] [ERROR] ❌ ERROR en línea 93: 'local exit_code=$?' (code: 1)
+[2025-11-13T00:58:02Z] [ERROR] Checkpoint actual: 
+[2025-11-13T00:58:02Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T00:58:02Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T00:58:02Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T00:58:02Z] [ERROR] Script terminado con error: 1
+[2025-11-13T00:58:02Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T00:58:02Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T00:58:02Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T00:58:02Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:00:17Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T01:00:17Z] [DEBUG] Configurando manejo global de señales...

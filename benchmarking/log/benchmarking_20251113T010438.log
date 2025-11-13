@@ -1,0 +1,889 @@
+[2025-11-13T01:00:17Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-13T01:00:17Z] [INFO] Fecha: 2025-11-13T01:00:17Z
+[2025-11-13T01:00:17Z] [INFO] Parámetros recibidos: 
+[2025-11-13T01:00:17Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-13T01:00:17Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-13T01:00:17Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-13T01:00:17Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T01:00:17Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-13T01:00:17Z] [INFO] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-13T01:00:17Z] [INFO] 🔐 CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-13T01:00:17Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: docker image rm -f cpu-heavy:latest ram-heavy:latest my-py-scheduler:latest
+[2025-11-13T01:00:17Z] [DEBUG] Comando exitoso: Limpiar imágenes locales
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: docker container prune -f
+[2025-11-13T01:00:17Z] [DEBUG] Comando exitoso: Limpiar contenedores
+[2025-11-13T01:00:17Z] [INFO] Scheduler seleccionado por parámetro: watch
+[2025-11-13T01:00:17Z] [INFO] Variante de scheduler seleccionada: watch
+[2025-11-13T01:00:17Z] [INFO] 🔐 CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-13T01:00:17Z] [INFO] Copiando scheduler-watch desde ../variants/watch-skeleton/scheduler.py
+[2025-11-13T01:00:17Z] [DEBUG] Scheduler watch copiado exitosamente
+[2025-11-13T01:00:17Z] [INFO] Scheduler copiado exitosamente a ./scheduler.py
+[2025-11-13T01:00:17Z] [INFO] Copiando archivos de configuración al directorio actual
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: cp ../Dockerfile ./Dockerfile
+[2025-11-13T01:00:17Z] [DEBUG] Comando exitoso: Copiar Dockerfile
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: cp ../requirements.txt ./requirements.txt
+[2025-11-13T01:00:17Z] [DEBUG] Comando exitoso: Copiar requirements
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: cp ../rbac-deploy.yaml ./rbac-deploy.yaml
+[2025-11-13T01:00:17Z] [DEBUG] Comando exitoso: Copiar RBAC
+[2025-11-13T01:00:17Z] [INFO] 🔐 CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-13T01:00:17Z] [INFO] Eliminando cluster existente sched-lab
+[2025-11-13T01:00:17Z] [DEBUG] Ejecutando: kind delete cluster --name sched-lab
+[2025-11-13T01:00:22Z] [DEBUG] Comando exitoso: Eliminar cluster existente
+[2025-11-13T01:00:22Z] [INFO] Creando nuevo cluster sched-lab
+[2025-11-13T01:00:22Z] [DEBUG] Ejecutando: kind create cluster --name sched-lab --config kind-cluster.yaml
+[2025-11-13T01:00:59Z] [DEBUG] Comando exitoso: Crear cluster Kind
+[2025-11-13T01:00:59Z] [INFO] Cluster sched-lab creado exitosamente
+[2025-11-13T01:00:59Z] [INFO] Esperando que nodo control-plane esté en estado Ready
+[2025-11-13T01:00:59Z] [INFO] Nodo control-plane está Ready y operativo
+[2025-11-13T01:00:59Z] [INFO] 🔐 CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-13T01:00:59Z] [DEBUG] 📝 Operación registrada: create_cluster -> kind-cluster
+[2025-11-13T01:00:59Z] [INFO] 🔐 CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-13T01:00:59Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:00:59Z] [DEBUG] Comando exitoso: Limpiar pods del namespace
+[2025-11-13T01:00:59Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:01:00Z] [DEBUG] Comando exitoso: Limpiar deployments del namespace
+[2025-11-13T01:01:00Z] [INFO] Creando namespace test-scheduler
+[2025-11-13T01:01:00Z] [DEBUG] Ejecutando: kubectl create namespace test-scheduler
+[2025-11-13T01:01:00Z] [DEBUG] Comando exitoso: Crear namespace
+[2025-11-13T01:01:00Z] [INFO] 🔐 CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-13T01:01:00Z] [DEBUG] 📝 Operación registrada: create_namespace -> test-scheduler
+[2025-11-13T01:01:00Z] [INFO] Construyendo y cargando imagen del scheduler personalizado
+[2025-11-13T01:01:00Z] [INFO] Iniciando construcción de imagen [my-py-scheduler:latest] desde directorio [./]
+[2025-11-13T01:01:04Z] [INFO] Imagen my-py-scheduler:latest construida exitosamente
+[2025-11-13T01:01:04Z] [INFO] Cargando imagen my-py-scheduler:latest en nodo control-plane: [sched-lab-control-plane]
+[2025-11-13T01:01:12Z] [INFO] Esperando imagen my-py-scheduler:latest en nodo sched-lab-control-plane
+[2025-11-13T01:01:12Z] [INFO] Imagen my-py-scheduler:latest cargada correctamente en nodo sched-lab-control-plane
+[2025-11-13T01:01:12Z] [INFO] Imagen my-py-scheduler:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-13T01:01:12Z] [DEBUG] 📝 Operación registrada: load_image_scheduler -> my-py-scheduler
+[2025-11-13T01:01:12Z] [INFO] Construyendo y cargando imágenes de prueba (solo CPU para pruebas)
+[2025-11-13T01:01:12Z] [INFO] Iniciando construcción de imagen [cpu-heavy:latest] desde directorio [./cpu-heavy]
+[2025-11-13T01:01:13Z] [INFO] Imagen cpu-heavy:latest construida exitosamente
+[2025-11-13T01:01:13Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-13T01:01:22Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker
+[2025-11-13T01:01:22Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-13T01:01:22Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-13T01:01:32Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker2
+[2025-11-13T01:01:32Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-13T01:01:32Z] [INFO] Imagen cpu-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-13T01:01:32Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> cpu-heavy
+[2025-11-13T01:01:32Z] [INFO] Construyendo y cargando imágenes de prueba (solo RAM para pruebas)
+[2025-11-13T01:01:32Z] [INFO] Iniciando construcción de imagen [ram-heavy:latest] desde directorio [./ram-heavy]
+[2025-11-13T01:01:32Z] [INFO] Imagen ram-heavy:latest construida exitosamente
+[2025-11-13T01:01:33Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-13T01:01:36Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker
+[2025-11-13T01:01:36Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-13T01:01:36Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-13T01:01:41Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker2
+[2025-11-13T01:01:41Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-13T01:01:41Z] [INFO] Imagen ram-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-13T01:01:41Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> cpu-heavy
+[2025-11-13T01:01:41Z] [INFO] Construyendo y cargando imágenes de prueba (Servidor Web pruebas)
+[2025-11-13T01:01:41Z] [INFO] Iniciando construcción de imagen [nginx:latest] desde directorio [./cpu-heavy]
+[2025-11-13T01:01:41Z] [INFO] Imagen nginx:latest construida exitosamente
+[2025-11-13T01:01:41Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker]
+[2025-11-13T01:01:42Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker
+[2025-11-13T01:01:42Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-13T01:01:42Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker2]
+[2025-11-13T01:01:42Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker2
+[2025-11-13T01:01:42Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-13T01:01:42Z] [INFO] Imagen nginx:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-13T01:01:42Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> nginx
+[2025-11-13T01:01:42Z] [INFO] Construyendo y cargando imágenes de prueba (test -basic pause)
+[2025-11-13T01:01:42Z] [INFO] Iniciando construcción de imagen [pause:3.9] desde directorio [./test-basic]
+[2025-11-13T01:01:43Z] [INFO] Imagen pause:3.9 construida exitosamente
+[2025-11-13T01:01:43Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker]
+[2025-11-13T01:01:44Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker
+[2025-11-13T01:01:44Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker
+[2025-11-13T01:01:44Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker2]
+[2025-11-13T01:01:45Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker2
+[2025-11-13T01:01:45Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker2
+[2025-11-13T01:01:45Z] [INFO] Imagen pause:3.9 cargada exitosamente en todos los nodos seleccionados
+[2025-11-13T01:01:45Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> test-basic
+[2025-11-13T01:01:45Z] [INFO] Configurando métricas del cluster
+[2025-11-13T01:01:45Z] [INFO] 🔐 CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-13T01:01:45Z] [INFO] Comprobando si Metrics Server ya está instalado
+[2025-11-13T01:01:45Z] [INFO] Descargando imagen Metrics Server localmente
+[2025-11-13T01:01:45Z] [DEBUG] Ejecutando: docker pull registry.k8s.io/metrics-server/metrics-server:v0.6.3
+[2025-11-13T01:01:46Z] [DEBUG] Comando exitoso: Descargar imagen metrics-server
+[2025-11-13T01:01:46Z] [INFO] Cargando imagen Metrics Server en todos los nodos Kind
+[2025-11-13T01:01:46Z] [INFO] Cargando imagen en sched-lab-worker
+[2025-11-13T01:01:46Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker
+[2025-11-13T01:01:51Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-13T01:01:51Z] [INFO] Cargando imagen en sched-lab-control-plane
+[2025-11-13T01:01:51Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-control-plane
+[2025-11-13T01:01:56Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-13T01:01:56Z] [INFO] Cargando imagen en sched-lab-worker2
+[2025-11-13T01:01:56Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker2
+[2025-11-13T01:02:00Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-13T01:02:00Z] [INFO] Aplicando manifiesto Metrics Server
+[2025-11-13T01:02:00Z] [DEBUG] Ejecutando: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml
+[2025-11-13T01:02:01Z] [DEBUG] Comando exitoso: Aplicar metrics-server
+[2025-11-13T01:02:01Z] [INFO] Parcheando TLS inseguro
+[2025-11-13T01:02:01Z] [DEBUG] Ejecutando: kubectl patch deployment metrics-server -n kube-system --type=json -p=[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]
+[2025-11-13T01:02:02Z] [DEBUG] Comando exitoso: Parchear metrics-server
+[2025-11-13T01:02:02Z] [INFO] Esperando Metrics Server disponible (timeout 60s)
+[2025-11-13T01:02:02Z] [DEBUG] Ejecutando: kubectl wait --for=condition=available --timeout=60s deployment/metrics-server -n kube-system
+[2025-11-13T01:02:22Z] [DEBUG] Comando exitoso: Esperar metrics-server
+[2025-11-13T01:02:22Z] [INFO] Metrics Server está disponible
+[2025-11-13T01:02:22Z] [INFO] Pausa de 10 segundos para estabilizar
+[2025-11-13T01:02:32Z] [INFO] 🔐 CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-13T01:02:32Z] [DEBUG] 📝 Operación registrada: install_metrics_server -> metrics-server
+[2025-11-13T01:02:32Z] [INFO] Mostrando estado actual del cluster
+[2025-11-13T01:02:32Z] [INFO] Mostrando información del cluster
+[2025-11-13T01:02:32Z] [INFO] === Listing all Kind clusters ===
+[2025-11-13T01:02:32Z] [DEBUG] Ejecutando: kind get clusters
+[2025-11-13T01:02:32Z] [DEBUG] Comando exitoso: Listar clusters Kind
+[2025-11-13T01:02:32Z] [INFO] === Showing nodes and status ===
+[2025-11-13T01:02:32Z] [DEBUG] Ejecutando: kubectl get nodes -o wide
+[2025-11-13T01:02:32Z] [DEBUG] Comando exitoso: Listar nodos
+[2025-11-13T01:02:32Z] [INFO] === Cluster info ===
+[2025-11-13T01:02:32Z] [DEBUG] Ejecutando: kubectl cluster-info
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Info del cluster
+[2025-11-13T01:02:33Z] [INFO] === Listing namespaces ===
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: kubectl get ns
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Listar namespaces
+[2025-11-13T01:02:33Z] [INFO] === Listing all pods in all namespaces ===
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: kubectl get pods --all-namespaces -o wide
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Listar todos los pods
+[2025-11-13T01:02:33Z] [INFO] === Checking images on each node ===
+[2025-11-13T01:02:33Z] [INFO] Imágenes en nodo sched-lab-worker:
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: docker exec sched-lab-worker crictl images
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-13T01:02:33Z] [INFO] Imágenes en nodo sched-lab-control-plane:
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: docker exec sched-lab-control-plane crictl images
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-13T01:02:33Z] [INFO] Imágenes en nodo sched-lab-worker2:
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: docker exec sched-lab-worker2 crictl images
+[2025-11-13T01:02:33Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-13T01:02:33Z] [INFO] === Current pod metrics ===
+[2025-11-13T01:02:33Z] [DEBUG] Ejecutando: kubectl top pods --all-namespaces
+[2025-11-13T01:02:34Z] [DEBUG] Comando exitoso: Métricas de pods
+[2025-11-13T01:02:34Z] [INFO] 🔍 Realizando auditoría PRE-scheduler...
+[2025-11-13T01:02:34Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: pre_scheduler)
+[2025-11-13T01:02:34Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-13T01:02:34Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-13T01:02:34Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-13T01:02:34Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-13T01:02:34Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-13T01:02:34Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-13T01:02:34Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-13T01:02:34Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-13T01:02:35Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-13T01:02:35Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-13T01:02:35Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-13T01:02:35Z] [DEBUG] Auditoría PRE-scheduler - verificando prerequisitos...
+[2025-11-13T01:02:35Z] [DEBUG] Verificando imagen del scheduler...
+[2025-11-13T01:02:35Z] [DEBUG] Verificando imagen del scheduler SOLO en control-plane...
+[2025-11-13T01:02:35Z] [DEBUG] ✅ Imagen my-py-scheduler encontrada en sched-lab-control-plane
+[2025-11-13T01:02:35Z] [DEBUG] ⚠️  Imagen del scheduler no requerida en worker: sched-lab-worker
+[2025-11-13T01:02:35Z] [DEBUG] ⚠️  Imagen del scheduler no requerida en worker: sched-lab-worker2
+[2025-11-13T01:02:35Z] [DEBUG] Verificando imagen CPU...
+[2025-11-13T01:02:35Z] [DEBUG] Verificando imágenes de test SOLO en workers...
+[2025-11-13T01:02:35Z] [DEBUG] ✅ Imagen cpu-heavy encontrada en worker: sched-lab-worker
+[2025-11-13T01:02:35Z] [DEBUG] ❌ Imagen cpu-heavy NO encontrada en worker: sched-lab-worker2
+[2025-11-13T01:02:35Z] [DEBUG] ℹ️  Imagen cpu-heavy no presente en control-plane (OK): sched-lab-control-plane
+[2025-11-13T01:02:35Z] [WARN] Imagen de test cpu-heavy no encontrada en algunos workers
+[2025-11-13T01:02:35Z] [DEBUG] ✅ Imagen pause encontrada en worker: sched-lab-worker
+[2025-11-13T01:02:36Z] [DEBUG] ❌ Imagen pause NO encontrada en worker: sched-lab-worker2
+[2025-11-13T01:02:36Z] [DEBUG] ℹ️  Imagen pause presente en control-plane (no requerido): sched-lab-control-plane
+[2025-11-13T01:02:36Z] [WARN] Imagen de test pause no encontrada en algunos workers
+[2025-11-13T01:02:36Z] [WARN] Algunas imágenes de test no encontradas
+[2025-11-13T01:02:36Z] [DEBUG] Verificando metrics-server...
+[2025-11-13T01:02:36Z] [DEBUG] Verificando metrics-server...
+[2025-11-13T01:02:36Z] [DEBUG] ✅ Metrics Server operativo
+[2025-11-13T01:02:36Z] [DEBUG] Verificando namespace de test...
+[2025-11-13T01:02:37Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-13T01:02:37Z] [INFO] 🔐 CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-13T01:02:37Z] [INFO] === ENTORNO COMPLETO LISTO PARA TESTS ===
+[2025-11-13T01:02:37Z] [INFO] Iniciando despliegue del scheduler: watch
+[2025-11-13T01:02:37Z] [INFO] 🔐 CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-13T01:02:37Z] [INFO] Eliminando despliegue previo del scheduler si existe
+[2025-11-13T01:02:37Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true
+[2025-11-13T01:02:37Z] [DEBUG] Comando exitoso: Eliminar scheduler anterior
+[2025-11-13T01:02:37Z] [INFO] Aplicando configuración RBAC y Deployment del scheduler
+[2025-11-13T01:02:37Z] [DEBUG] Ejecutando: kubectl apply -f rbac-deploy.yaml
+[2025-11-13T01:02:37Z] [DEBUG] Comando exitoso: Aplicar RBAC del scheduler
+[2025-11-13T01:02:37Z] [INFO] Esperando a que el scheduler se despliegue correctamente (timeout: 120s)
+[2025-11-13T01:02:37Z] [DEBUG] Ejecutando: kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
+[2025-11-13T01:02:38Z] [DEBUG] Comando exitoso: Esperar despliegue del scheduler
+[2025-11-13T01:02:38Z] [INFO] Scheduler desplegado exitosamente
+[2025-11-13T01:02:38Z] [INFO] 🔐 CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-13T01:02:38Z] [DEBUG] 📝 Operación registrada: deploy_scheduler -> my-scheduler
+[2025-11-13T01:02:38Z] [INFO] 🔍 Realizando auditoría POST-scheduler...
+[2025-11-13T01:02:38Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: post_scheduler)
+[2025-11-13T01:02:38Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-13T01:02:38Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-13T01:02:39Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-13T01:02:39Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-13T01:02:39Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-13T01:02:40Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-13T01:02:40Z] [DEBUG] Auditoría POST-scheduler - verificando despliegue...
+[2025-11-13T01:02:40Z] [DEBUG] Verificando despliegue del scheduler personalizado...
+[2025-11-13T01:02:40Z] [DEBUG] ✅ Scheduler ejecutándose en control-plane: sched-lab-control-plane
+[2025-11-13T01:02:41Z] [DEBUG] Verificando funcionalidad del scheduler...
+[2025-11-13T01:02:47Z] [DEBUG] ✅ Scheduler está programando pods correctamente
+[2025-11-13T01:02:47Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-13T01:02:47Z] [INFO] 🔐 CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-13T01:02:47Z] [SUCCESS] === SETUP COMPLETO FINALIZADO EXITOSAMENTE ===
+[2025-11-13T01:02:47Z] [INFO] 🚀 Iniciando ejecución de tests...
+[2025-11-13T01:02:47Z] [INFO] Parámetros para tests: Scheduler=watch, Pods=20, Concurrentes=10
+[2025-11-13T01:02:47Z] [DEBUG] Ejecutando: ./scheduler-test.sh watch 20 10
+[2025-11-13T01:02:47Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T01:02:47Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-13T01:02:47Z] [INFO] === INICIO DE TESTS DE SCHEDULER ===
+[2025-11-13T01:02:47Z] [INFO] Scheduler: watch, Pods por tipo: 20, Máximo concurrente: 10
+[2025-11-13T01:02:47Z] [INFO] Inicializando test de scheduler: watch
+[2025-11-13T01:02:47Z] [INFO] Número de pods por tipo: 20
+[2025-11-13T01:02:47Z] [INFO] Máximo pods concurrentes: 10
+[2025-11-13T01:02:47Z] [INFO] Namespace: test-scheduler
+[2025-11-13T01:02:47Z] [DEBUG] Directorios creados para scheduler 'watch':
+[2025-11-13T01:02:47Z] [DEBUG]   - Base: ./watch
+[2025-11-13T01:02:47Z] [DEBUG]   - Métricas: ./watch/metrics
+[2025-11-13T01:02:47Z] [DEBUG]   - Temporal: ./watch/temp_20251113_020247
+[2025-11-13T01:02:47Z] [INFO] Limpiando namespace test-scheduler
+[2025-11-13T01:02:47Z] [DEBUG] Ejecutando: kubectl delete pods --all -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:48Z] [DEBUG] Comando exitoso: kubectl delete pods --all -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:50Z] [DEBUG] 📝 Operación registrada: start_tests -> scheduler-benchmark
+[2025-11-13T01:02:50Z] [INFO] Ejecución paralela iniciada (máximo 10 pods)
+[2025-11-13T01:02:50Z] [DEBUG] Ejecutando limpieza completa de recursos
+[2025-11-13T01:02:50Z] [DEBUG] Iniciando trabajo para pod: cpu-heavy-pod-1
+[2025-11-13T01:02:50Z] [INFO] Iniciando medición de pod: tipo=cpu-heavy, yaml=./cpu-heavy/cpu-heavy-pod.yaml
+[2025-11-13T01:02:50Z] [DEBUG] Ejecutando: rm -rf ./watch/temp_20251113_020247
+[2025-11-13T01:02:50Z] [DEBUG] Eliminando pods existentes con label app=cpu-heavy
+[2025-11-13T01:02:50Z] [DEBUG] Comando exitoso: rm -rf ./watch/temp_20251113_020247
+[2025-11-13T01:02:50Z] [DEBUG] Ejecutando: kubectl delete pod -l app=cpu-heavy -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:50Z] [DEBUG] Directorio temporal eliminado: ./watch/temp_20251113_020247
+[2025-11-13T01:02:50Z] [DEBUG] Limpieza final de recursos de Kubernetes
+[2025-11-13T01:02:50Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:50Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:50Z] [WARN] Comando falló (1): ./scheduler-test.sh watch 20 10
+[2025-11-13T01:02:50Z] [ERROR] Tests fallaron con código: 1
+[2025-11-13T01:02:50Z] [DEBUG] Comando exitoso: kubectl delete pod -l app=cpu-heavy -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:50Z] [ERROR] ❌ ERROR en línea 523: 'return $test_exit_code' (code: 1)
+[2025-11-13T01:02:50Z] [ERROR] Checkpoint actual: setup_completed
+[2025-11-13T01:02:50Z] [INFO] 🔄 Iniciando rollback al checkpoint: setup_completed
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:02:50Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-13T01:02:50Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - deploy_scheduler: my-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - install_metrics_server: metrics-server
+[2025-11-13T01:02:50Z] [DEBUG]   - load_image_scheduler: my-py-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - load_image_cpu: test-basic
+[2025-11-13T01:02:50Z] [WARN] Checkpoint desconocido: setup_completed, limpieza general
+[2025-11-13T01:02:50Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:02:50Z] [ERROR] Script terminado con error: 1
+[2025-11-13T01:02:50Z] [INFO] 🔄 Iniciando rollback al checkpoint: setup_completed
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:02:50Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-13T01:02:50Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - deploy_scheduler: my-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - install_metrics_server: metrics-server
+[2025-11-13T01:02:50Z] [DEBUG]   - load_image_scheduler: my-py-scheduler
+[2025-11-13T01:02:50Z] [DEBUG]   - load_image_cpu: test-basic
+[2025-11-13T01:02:50Z] [WARN] Checkpoint desconocido: setup_completed, limpieza general
+[2025-11-13T01:02:50Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:02:50Z] [WARN] Comando falló (1): ./benchmarking_setup.sh watch 20
+[2025-11-13T01:02:50Z] [ERROR] ❌ ERROR en línea 93: 'local exit_code=$?' (code: 1)
+[2025-11-13T01:02:50Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:02:50Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:02:50Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:02:50Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:02:50Z] [ERROR] Script terminado con error: 1
+[2025-11-13T01:02:50Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:02:50Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:02:50Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:02:50Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:02:51Z] [DEBUG] Tiempo de inicio de medición: 1762995771
+[2025-11-13T01:02:51Z] [INFO] Creando pod desde YAML: ./cpu-heavy/cpu-heavy-pod.yaml
+[2025-11-13T01:02:51Z] [INFO] Pod creado exitosamente: cpu-heavy-pod-8znvh
+[2025-11-13T01:02:51Z] [DEBUG] Pod registrado: cpu-heavy-pod-8znvh (total: 1)
+[2025-11-13T01:02:51Z] [INFO] Esperando a que el pod cpu-heavy-pod-8znvh esté Ready
+[2025-11-13T01:02:51Z] [DEBUG] Esperando a que pod cpu-heavy-pod-8znvh esté Ready...
+[2025-11-13T01:02:53Z] [DEBUG] Esperando pod cpu-heavy-pod-8znvh... (2/120s)
+[2025-11-13T01:02:54Z] [INFO] Pod cpu-heavy-pod-8znvh está Ready y operativo
+[2025-11-13T01:02:54Z] [INFO] Pod cpu-heavy-pod-8znvh está Ready y operativo
+[2025-11-13T01:02:56Z] [INFO] Latencia total de scheduling: 5 segundos
+[2025-11-13T01:02:56Z] [DEBUG] Calculando métricas detalladas para cpu-heavy-pod-8znvh
+[2025-11-13T01:02:56Z] [DEBUG] Calculando pending_running_latency para pod: cpu-heavy-pod-8znvh
+[2025-11-13T01:02:56Z] [DEBUG] Ejecutando: kubectl -n test-scheduler get pod cpu-heavy-pod-8znvh -o jsonpath={.metadata.creationTimestamp}
+[2025-11-13T01:02:57Z] [DEBUG] Comando exitoso: kubectl -n test-scheduler get pod cpu-heavy-pod-8znvh -o jsonpath={.metadata.creationTimestamp}
+[2025-11-13T01:02:57Z] [DEBUG] Ejecutando: kubectl -n test-scheduler get pod cpu-heavy-pod-8znvh -o jsonpath={.status.startTime}
+[2025-11-13T01:02:57Z] [DEBUG] Comando exitoso: kubectl -n test-scheduler get pod cpu-heavy-pod-8znvh -o jsonpath={.status.startTime}
+[2025-11-13T01:02:57Z] [ERROR] ❌ ERROR en línea 134: 'date -d "$creation_time" +%s' (code: 1)
+[2025-11-13T01:02:57Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:02:57Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:02:57Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:02:57Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:02:57Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:02:57Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:02:57Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:02:57Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-13T01:02:57Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:57Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:57Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:02:58Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:02:59Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:04Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:04Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:04Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:04Z] [ERROR] ❌ ERROR en línea 135: 'date -d "$start_time" +%s' (code: 1)
+[2025-11-13T01:03:04Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:03:04Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:03:04Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:03:04Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:03:04Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:03:04Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:03:04Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:04Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-13T01:03:04Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:04Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:04Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:04Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:04Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:05Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:05Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:05Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:05Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:05Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:10Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:10Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:10Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:10Z] [DEBUG] Calculando pull_start_latency para pod: cpu-heavy-pod-8znvh
+[2025-11-13T01:03:10Z] [DEBUG] Ejecutando: kubectl get events -n test-scheduler --field-selector involvedObject.name=cpu-heavy-pod-8znvh --sort-by=.metadata.creationTimestamp -o jsonpath={range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}
+[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl get events -n test-scheduler --field-selector involvedObject.name=cpu-heavy-pod-8znvh --sort-by=.metadata.creationTimestamp -o jsonpath={range .items[*]}{.lastTimestamp}{" "}{.reason}{"\n"}{end}
+[2025-11-13T01:03:11Z] [DEBUG] Pull_start_latency para cpu-heavy-pod-8znvh: 1762992173 segundos
+[2025-11-13T01:03:11Z] [DEBUG] Calculando uso promedio de recursos del scheduler
+[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:11Z] [ERROR] ❌ ERROR en línea 148: 'sed 's#pod/##'' (code: 141)
+[2025-11-13T01:03:11Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:18Z] [DEBUG] Ejecutando: kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:18Z] [WARN] Comando falló (1): kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:19Z] [DEBUG] Ejecutando: kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:19Z] [WARN] Comando falló (1): kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:20Z] [DEBUG] Ejecutando: kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:21Z] [WARN] Comando falló (1): kubectl top pod [0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:11Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:11Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:11Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:11Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:11Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:12Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:13Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:18Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:18Z] [INFO] Rollback completado al checkpoint:  -n kube-system
+[2025-11-13T01:03:22Z] [WARN] No se pudieron obtener métricas del scheduler
+[2025-11-13T01:03:22Z] [DEBUG] Calculando list_ops para pod: cpu-heavy-pod-8znvh
+[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:22Z] [ERROR] ❌ ERROR en línea 186: 'sed 's#pod/##'' (code: 141)
+[2025-11-13T01:03:22Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:03:22Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:03:22Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:03:22Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:03:22Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:22Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:23Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:28Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:28Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:22Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:22Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:22Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:22Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:28Z] [INFO] Rollback completado al checkpoint:  --since=1m
+[2025-11-13T01:03:28Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:22Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:22Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:22Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:22Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:28Z] [INFO] Rollback completado al checkpoint:  --since=1m
+[2025-11-13T01:03:30Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:22Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:22Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:22Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:22Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:28Z] [INFO] Rollback completado al checkpoint:  --since=1m
+[2025-11-13T01:03:31Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:22Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:22Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:22Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:22Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+pod "cpu-heavy-pod-8znvh" deleted from test-scheduler namespace
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:22Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:23Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:28Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:28Z] [INFO] Rollback completado al checkpoint:  --since=1m
+[2025-11-13T01:03:31Z] [DEBUG] Calculando attempts y eventos para pod: cpu-heavy-pod-8znvh
+[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl -n kube-system get pods -l app=my-scheduler -o name
+[2025-11-13T01:03:31Z] [ERROR] ❌ ERROR en línea 209: 'sed 's#pod/##'' (code: 141)
+[2025-11-13T01:03:31Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:38Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint:  --since=1h
+[2025-11-13T01:03:38Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint:  --since=1h
+[2025-11-13T01:03:38Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint:  --since=1h
+[2025-11-13T01:03:38Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint:  --since=1h
+[2025-11-13T01:03:38Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:38Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:38Z] [DEBUG] Ejecutando: kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:38Z] [WARN] Comando falló (1): kubectl -n kube-system logs [0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl -n kube-system get pods -l app=my-scheduler -o name[0m
+[2025-11-13T01:03:31Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas hasta el checkpoint:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Operaciones realizadas:[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG]   - start_tests: scheduler-benchmark[0m
+[1;33m[2025-11-13T01:03:31Z] [WARN] Checkpoint desconocido: , limpieza general[0m
+[2025-11-13T01:03:31Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:03:31Z] [INFO] 🧹 Limpieza completa del cluster...
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:31Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+No resources found
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false[0m
+[0;34m[2025-11-13T01:03:32Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[0;34m[2025-11-13T01:03:33Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true[0m
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-13T01:03:38Z] [INFO] ✅ Limpieza general completada
+[2025-11-13T01:03:38Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-13T01:03:38Z] [DEBUG] Métricas de scheduler para cpu-heavy-pod-8znvh: retries=0
+0, implicit_retries=0, events=0
+0
+[2025-11-13T01:03:38Z] [DEBUG] Registrando métricas para cpu-heavy-pod-8znvh
+[2025-11-13T01:03:38Z] [DEBUG] Escribiendo métricas temporales en: ./watch/temp_20251113_020247/cpu-heavy-pod-8znvh.json
+[2025-11-13T01:03:38Z] [ERROR] ❌ ERROR en línea 280: 'safe_run jq -n --arg pod_name "$pod_name" --arg pod_type "$pod_type" --argjson latency "$latency" --argjson pending_latency "$pending_latency" --argjson pull_latency "$pull_latency" --argjson cpu "$cpu" --argjson mem "$mem" --argjson list_ops "$list_ops" --argjson retries "$retries" --argjson implicit_retries "$implicit_retries" --argjson events "$events" '{
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }' > "$temp_file"' (code: 1)
+[2025-11-13T01:03:38Z] [ERROR] Checkpoint actual: 
+[2025-11-13T01:03:38Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-13T01:03:38Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-13T01:03:38Z] [DEBUG] Operaciones realizadas:
+[2025-11-13T01:03:38Z] [DEBUG]   - start_tests: scheduler-benchmark
+[2025-11-13T01:03:38Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-13T01:03:38Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T01:04:38Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T01:04:38Z] [DEBUG] Configurando manejo global de señales...

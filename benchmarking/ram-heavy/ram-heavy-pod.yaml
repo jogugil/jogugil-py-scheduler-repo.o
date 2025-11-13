@@ -11,3 +11,4 @@ spec:
   containers:
   - name: ram-heavy
     image: ram-heavy:latest
+    imagePullPolicy: Never

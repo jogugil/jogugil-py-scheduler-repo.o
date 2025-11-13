@@ -1,0 +1,48 @@
+[2025-11-12T23:52:53Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-12T23:52:53Z] [INFO] Fecha: 2025-11-12T23:52:53Z
+[2025-11-12T23:52:53Z] [INFO] Parámetros recibidos: 
+[2025-11-12T23:52:53Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-12T23:52:53Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-12T23:52:53Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-12T23:52:53Z] [DEBUG] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-12T23:52:53Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-12T23:52:53Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-12T23:52:53Z] [INFO] === INICIO SETUP COMPLETO ===
+[2025-11-12T23:52:53Z] [INFO] 🔐 CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-12T23:52:53Z] [DEBUG] Ejecutando: docker image rm -f cpu-heavy:latest my-py-scheduler:latest
+[2025-11-12T23:52:54Z] [DEBUG] Comando exitoso: docker image rm -f cpu-heavy:latest my-py-scheduler:latest
+[2025-11-12T23:52:54Z] [DEBUG] Ejecutando: docker container prune -f
+[2025-11-12T23:52:54Z] [DEBUG] Comando exitoso: docker container prune -f
+[2025-11-12T23:52:54Z] [INFO] Scheduler seleccionado por parámetro: watch
+[2025-11-12T23:52:54Z] [INFO] Variante de scheduler seleccionada: watch
+[2025-11-12T23:52:54Z] [INFO] 🔐 CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-12T23:52:54Z] [ERROR] Fallo al copiar scheduler
+[2025-11-12T23:52:54Z] [ERROR] ❌ ERROR en línea 395: 'return 1' (code: 1)
+[2025-11-12T23:52:54Z] [ERROR] Checkpoint actual: scheduler_selected
+[2025-11-12T23:52:54Z] [INFO] 🔄 Iniciando rollback al checkpoint: scheduler_selected
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas:
+[2025-11-12T23:52:54Z] [WARN] Checkpoint desconocido: scheduler_selected, limpieza general
+[2025-11-12T23:52:54Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-12T23:52:54Z] [ERROR] Script terminado con error: 1
+[2025-11-12T23:52:54Z] [INFO] 🔄 Iniciando rollback al checkpoint: scheduler_selected
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas:
+[2025-11-12T23:52:54Z] [WARN] Checkpoint desconocido: scheduler_selected, limpieza general
+[2025-11-12T23:52:54Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-12T23:52:54Z] [WARN] Comando falló (1): ./benchmarking_setup.sh watch 20
+[2025-11-12T23:52:54Z] [ERROR] ❌ ERROR en línea 93: 'local exit_code=$?' (code: 1)
+[2025-11-12T23:52:54Z] [ERROR] Checkpoint actual: 
+[2025-11-12T23:52:54Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas:
+[2025-11-12T23:52:54Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-12T23:52:54Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-12T23:52:54Z] [ERROR] Script terminado con error: 1
+[2025-11-12T23:52:54Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-12T23:52:54Z] [DEBUG] Operaciones realizadas:
+[2025-11-12T23:52:54Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-12T23:52:54Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-13T00:02:42Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-13T00:02:42Z] [DEBUG] Configurando manejo global de señales...

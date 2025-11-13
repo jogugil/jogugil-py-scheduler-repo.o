@@ -1,16 +1,30 @@
 #!/bin/bash
 
 # ========================================
-# SCRIPT PRINCIPAL - PASA PARÁMETROS
+# SCRIPT PRINCIPAL - BENCHMARKING
 # ========================================
 
-# Cargar logging
+# Cargar logger
 source ./logger.sh
 
-# Mostrar parámetros recibidos
+# ========================================
+# ROTAR LOG ANTERIOR Y MARCAR INICIO
+# ========================================
+
+if [ -f "$LOG_FILE" ]; then
+    mv "$LOG_FILE" "$LOG_DIR/benchmarking_$(date -u +"%Y%m%dT%H%M%S").log" 2>/dev/null || true
+fi
+touch "$LOG_FILE"
+
+log "INFO" "================== INICIO DE EJECUCIÓN =================="
+log "INFO" "Fecha: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+# ========================================
+# PARÁMETROS
+# ========================================
+
 log "INFO" "Parámetros recibidos: $*"
 
-# Validar parámetros
 if [[ $# -eq 0 ]]; then
     log "WARN" "No se pasaron parámetros, usando valores por defecto: watch 20"
     SCHED_IMPL="watch"
@@ -36,10 +50,16 @@ if ! [[ "$NUM_PODS" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-# Configurar manejo de errores
+# ========================================
+# CONFIGURAR MANEJO DE ERRORES
+# ========================================
+
 enable_error_trapping
 
-# Banner de inicio
+# ========================================
+# BANNER DE INICIO
+# ========================================
+
 echo -e "${GREEN}"
 echo "========================================"
 echo "   BENCHMARKING - SCHEDULER"
@@ -48,17 +68,29 @@ echo "   Pods: $NUM_PODS"
 echo "========================================"
 echo -e "${NC}"
 
-log "INFO" "🚀 Iniciando benchmarking setup..."
+# ========================================
+# MANEJO DE SEÑALES
+# ========================================
 
-# EJECUTAR EL SETUP PASANDO LOS PARÁMETROS CON MANEJO SEGURO
+propagate_signal() {
+    log "INFO" "Propagando señal a procesos hijos..."
+    kill_all_background_processes
+    exit 1
+}
+trap propagate_signal SIGINT SIGTERM
+
+# ========================================
+# EJECUTAR SETUP
+# ========================================
+
+log "INFO" "🚀 Iniciando benchmarking setup..."
 log "INFO" "Ejecutando: ./benchmarking_setup.sh $SCHED_IMPL $NUM_PODS"
 
-# Usar safe_run para comandos que pueden fallar de forma no crítica
 if safe_run ./benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"; then
     log "SUCCESS" "Benchmarking completado exitosamente"
     echo -e "${GREEN}📄 Log completo en: $LOG_FILE${NC}"
 else
-    local exit_code=$?
+    exit_code=$?
     log "ERROR" "Benchmarking falló con código: $exit_code"
     echo -e "${RED}❌ ERROR - Revisa el log: $LOG_FILE${NC}"
     exit $exit_code

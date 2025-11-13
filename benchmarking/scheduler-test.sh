@@ -2,12 +2,6 @@
 set -euo pipefail
 
 # ========================================
-# CARGAR LOGGING Y MANEJO DE ERRORES
-# ========================================
-source ./logger.sh
-enable_error_trapping
-
-# ========================================
 # CONFIGURACIÓN GLOBAL
 # ========================================
 SCHED_IMPL=${1:-polling}
@@ -16,6 +10,16 @@ MAX_CONCURRENT_PODS=${3:-5}
 NAMESPACE="test-scheduler"
 SCHEDULER_NAME="my-scheduler"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+
+# Capturar SIGINT y SIGTERM
+trap abort_all SIGINT SIGTERM
+
+# ========================================
+# CARGAR LOGGING Y MANEJO DE ERRORES
+# ========================================
+source ./logger.sh
+enable_error_trapping
 
 # Estructura de directorios organizada por scheduler
 BASE_DIR="./${SCHED_IMPL}"
@@ -26,17 +30,22 @@ POD_TYPES=("cpu-heavy" "ram-heavy" "nginx" "test-basic")
 
 # Variables para control de ejecución
 declare -A CURRENT_PODS=()
+declare -a ALL_BACKGROUND_PIDS=()
 
 # ========================================
 # FUNCIÓN SAFE_RUN
 # ========================================
-safe_run() {
-    "$@" || log "WARN" "Comando '$*' falló pero se ignora"
-}
+# La voy a pasar a logger
+# ==========================
+# safe_run() {
+#     "$@" || log "WARN" "Comando '$*' falló pero se ignora"
+# }
+
 
 # ========================================
 # FUNCIONES DE CONTROL DE EJECUCIÓN
 # ========================================
+
 
 # Registrar un pod activo
 register_pod() {
@@ -303,8 +312,10 @@ write_pod_metrics_to_temp() {
 }
 
 measure_and_save_pod_metrics() {
+    #measure_and_save_pod_metrics "$base_pod_name" "$pod_type" "$yaml_file" "$NAMESPACE"
     local base_pod_name=$1 pod_type=$2 yaml_file=$3 namespace=$4
 
+    log "DEBUG" "En measure_and_save_pod_metrics: base_pod_name='$base_pod_name', pod_type='$pod_type'"
     log "INFO" "Iniciando medición de pod: tipo=$pod_type, yaml=$yaml_file"
 
     # Limpiar pods anteriores por label
@@ -377,41 +388,109 @@ measure_and_save_pod_metrics() {
     return 0
 }
 
-# ========================================
-# EJECUCIÓN PARALELA MEJORADA
-# ========================================
+#=========================================
+# Función pñara abortar todo
+#======================================
+abort_all() {
+    log "INFO" "🛑 SE RECIBIÓ Ctrl+C, ABORTANDO EJECUCIÓN PR EL USER..."
+    
+    # 1. Matar TODOS los procesos en background
+    log "INFO" "Matando ${#ALL_BACKGROUND_PIDS[@]} trabajos en background..."
+    for pid in "${ALL_BACKGROUND_PIDS[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            log "DEBUG" "Enviando SIGTERM al proceso $pid"
+            kill "$pid" 2>/dev/null
+        fi
+    done
+    
+    # 2. Esperar un poco para terminación graceful
+    sleep 3
+    
+    # 3. Forzar terminación si aún existen
+    for pid in "${ALL_BACKGROUND_PIDS[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            log "DEBUG" "Forzando terminación del proceso $pid"
+            kill -9 "$pid" 2>/dev/null
+        fi
+    done
+    
+    # 4. Limpiar recursos de Kubernetes
+    cleanup_active_pods
+    
+    log "INFO" "Abortado completado. Saliendo..."
+    exit 1
+}
+# ======================================== 
+process_pod() {
+    local base_pod_name="$1"
+    local pod_type="$2"
+    local yaml_file="$3"
+    local namespace="$4"
+    
+    log "DEBUG" "Procesando pod: $base_pod_name"
+    
+    if [[ ! -f "$yaml_file" ]]; then
+        log "ERROR" "YAML no encontrado: $yaml_file"
+        return 1
+    fi
+    
+    measure_and_save_pod_metrics "$base_pod_name" "$pod_type" "$yaml_file" "$namespace"
+}
+
 
 run_all_tests_parallel() {
     log "INFO" "Ejecución paralela iniciada (máximo $MAX_CONCURRENT_PODS pods)"
     local total_jobs=0
-    
+  
     for pod_type in "${POD_TYPES[@]}"; do
+	base_pod_name="${pod_type}-pod-"
         for i in $(seq 1 "$NUM_PODS"); do
             (
-                base_pod_name="${pod_type}-pod-${i}"
+                base_pod_name="${base_pod_name}${i}"
                 yaml_file="./${pod_type}/${pod_type}-pod.yaml"
-                
+
                 # Verificar que el YAML existe
                 if [[ ! -f "$yaml_file" ]]; then
                     log "ERROR" "Archivo YAML no encontrado: $yaml_file"
                     exit 1
                 fi
-                
+
                 log "DEBUG" "Iniciando trabajo para pod: $base_pod_name"
                 measure_and_save_pod_metrics "$base_pod_name" "$pod_type" "$yaml_file" "$NAMESPACE"
+
             ) &
+
+            # ✅ GUARDAR el PID REALMENTE
+            local pid=$!
+            ALL_BACKGROUND_PIDS+=($pid)
+            log "DEBUG" "Lanzado job para $base_pod_name (PID: $pid)"
             total_jobs=$((total_jobs + 1))
-            
+
             # Control de concurrencia
             while [ "$(jobs -rp | wc -l)" -ge "$MAX_CONCURRENT_PODS" ]; do
                 sleep 2
             done
         done
     done
-    
-    # Esperar a que todos los trabajos terminen
-    wait
-    log "INFO" "Ejecución paralela completada. Total de trabajos: $total_jobs"
+
+    # ✅ ESPERAR con gestión de errores
+    log "INFO" "Esperando que terminen $total_jobs jobs..."
+    local failed_jobs=0
+    for pid in "${ALL_BACKGROUND_PIDS[@]}"; do
+        if wait "$pid"; then
+            log "DEBUG" "Job $pid completado exitosamente"
+        else
+            log "ERROR" "Job $pid falló con código: $?"
+            ((failed_jobs++))
+        fi
+    done
+
+    if [ $failed_jobs -eq 0 ]; then
+        log "INFO" "Todos los pods procesados exitosamente"
+    else
+        log "ERROR" "$failed_jobs jobs fallaron"
+        return 1
+    fi
 }
 
 # ========================================
@@ -589,10 +668,13 @@ main() {
 
     # Limpiar namespace antes de empezar
     clean_namespace
+    register_operation "start_tests" "scheduler-benchmark"
 
     # Ejecutar tests en paralelo
     run_all_tests_parallel
 
+    audit_cluster_health "post_tests"
+    
     # Consolidar métricas y generar reportes
     if summarize_results; then
         generate_metrics_files

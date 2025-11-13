@@ -1,0 +1,162 @@
+[2025-11-12T23:22:37Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-12T23:22:37Z] [INFO] Fecha: 2025-11-12T23:22:37Z
+[2025-11-12T23:22:37Z] [INFO] Parámetros recibidos: 
+[2025-11-12T23:22:37Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-12T23:22:37Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-12T23:22:37Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-12T23:22:37Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-12T23:22:37Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-12T23:22:37Z] [INFO] === INICIO SETUP COMPLETO ===
+[2025-11-12T23:22:37Z] [INFO] 🔐 CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: docker image rm -f cpu-heavy:latest my-py-scheduler:latest
+[2025-11-12T23:22:37Z] [DEBUG] Comando exitoso: docker image rm -f cpu-heavy:latest my-py-scheduler:latest
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: docker container prune -f
+[2025-11-12T23:22:37Z] [DEBUG] Comando exitoso: docker container prune -f
+[2025-11-12T23:22:37Z] [INFO] 🔐 CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: cp ../Dockerfile ./Dockerfile
+[2025-11-12T23:22:37Z] [DEBUG] Comando exitoso: cp ../Dockerfile ./Dockerfile
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: cp ../requirements.txt ./requirements.txt
+[2025-11-12T23:22:37Z] [DEBUG] Comando exitoso: cp ../requirements.txt ./requirements.txt
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: cp ../rbac-deploy.yaml ./rbac-deploy.yaml
+[2025-11-12T23:22:37Z] [DEBUG] Comando exitoso: cp ../rbac-deploy.yaml ./rbac-deploy.yaml
+[2025-11-12T23:22:37Z] [INFO] 🔐 CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-12T23:22:37Z] [INFO] Eliminando cluster existente sched-lab
+[2025-11-12T23:22:37Z] [DEBUG] Ejecutando: kind delete cluster --name sched-lab
+[2025-11-12T23:22:43Z] [DEBUG] Comando exitoso: kind delete cluster --name sched-lab
+[2025-11-12T23:22:43Z] [INFO] Creando nuevo cluster sched-lab
+[2025-11-12T23:22:43Z] [DEBUG] Ejecutando: kind create cluster --name sched-lab --config kind-cluster.yaml
+[2025-11-12T23:23:22Z] [DEBUG] Comando exitoso: kind create cluster --name sched-lab --config kind-cluster.yaml
+[2025-11-12T23:23:22Z] [INFO] Esperando nodo control-plane Ready
+[2025-11-12T23:23:22Z] [DEBUG] 📝 Operación registrada: create_cluster -> kind-cluster
+[2025-11-12T23:23:22Z] [INFO] 🔐 CHECKPOINT: cluster_created - Cluster Kind creado y listo
+[2025-11-12T23:23:22Z] [INFO] 🔐 CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-12T23:23:22Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:23:23Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:23:23Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:23:23Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:23:23Z] [DEBUG] Ejecutando: kubectl create namespace test-scheduler
+[2025-11-12T23:23:24Z] [DEBUG] Comando exitoso: kubectl create namespace test-scheduler
+[2025-11-12T23:23:24Z] [DEBUG] 📝 Operación registrada: create_namespace -> test-scheduler
+[2025-11-12T23:23:24Z] [INFO] 🔐 CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-12T23:23:24Z] [INFO] Construyendo imagen my-py-scheduler:latest desde ./
+[2025-11-12T23:23:28Z] [INFO] Cargando imagen en sched-lab-control-plane
+[2025-11-12T23:23:37Z] [INFO] Esperando imagen my-py-scheduler:latest en nodo sched-lab-control-plane
+[2025-11-12T23:23:37Z] [INFO] Imagen my-py-scheduler:latest cargada en sched-lab-control-plane
+[2025-11-12T23:23:37Z] [DEBUG] 📝 Operación registrada: load_image_my-py-scheduler -> my-py-scheduler:latest
+[2025-11-12T23:23:37Z] [INFO] Imagen my-py-scheduler:latest cargada exitosamente
+[2025-11-12T23:23:37Z] [INFO] Construyendo imagen cpu-heavy:latest desde ./cpu-heavy
+[2025-11-12T23:23:37Z] [INFO] Cargando imagen en sched-lab-worker2
+[2025-11-12T23:23:47Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker2
+[2025-11-12T23:23:47Z] [INFO] Imagen cpu-heavy:latest cargada en sched-lab-worker2
+[2025-11-12T23:23:47Z] [INFO] Cargando imagen en sched-lab-worker
+[2025-11-12T23:23:56Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker
+[2025-11-12T23:23:56Z] [INFO] Imagen cpu-heavy:latest cargada en sched-lab-worker
+[2025-11-12T23:23:56Z] [DEBUG] 📝 Operación registrada: load_image_cpu-heavy -> cpu-heavy:latest
+[2025-11-12T23:23:56Z] [INFO] Imagen cpu-heavy:latest cargada exitosamente
+[2025-11-12T23:23:56Z] [INFO] 🔐 CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-12T23:23:57Z] [DEBUG] Ejecutando: docker pull registry.k8s.io/metrics-server/metrics-server:v0.6.3
+[2025-11-12T23:23:58Z] [DEBUG] Comando exitoso: docker pull registry.k8s.io/metrics-server/metrics-server:v0.6.3
+[2025-11-12T23:23:58Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker2
+[2025-11-12T23:24:02Z] [DEBUG] Comando exitoso: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker2
+[2025-11-12T23:24:02Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-control-plane
+[2025-11-12T23:24:06Z] [DEBUG] Comando exitoso: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-control-plane
+[2025-11-12T23:24:06Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker
+[2025-11-12T23:24:09Z] [DEBUG] Comando exitoso: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker
+[2025-11-12T23:24:09Z] [DEBUG] Ejecutando: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml
+[2025-11-12T23:24:10Z] [DEBUG] Comando exitoso: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml
+[2025-11-12T23:24:10Z] [DEBUG] Ejecutando: kubectl patch deployment metrics-server -n kube-system --type=json -p=[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]
+[2025-11-12T23:24:11Z] [DEBUG] Comando exitoso: kubectl patch deployment metrics-server -n kube-system --type=json -p=[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]
+[2025-11-12T23:24:11Z] [DEBUG] Ejecutando: kubectl wait --for=condition=available --timeout=60s deployment/metrics-server -n kube-system
+[2025-11-12T23:24:31Z] [DEBUG] Comando exitoso: kubectl wait --for=condition=available --timeout=60s deployment/metrics-server -n kube-system
+[2025-11-12T23:24:31Z] [DEBUG] 📝 Operación registrada: install_metrics_server -> metrics-server
+[2025-11-12T23:24:31Z] [INFO] 🔐 CHECKPOINT: metrics_server_installed - Metrics Server instalado
+[2025-11-12T23:24:31Z] [INFO] Mostrando estado del cluster
+[2025-11-12T23:24:31Z] [INFO] === Estado del cluster ===
+[2025-11-12T23:24:31Z] [DEBUG] Ejecutando: kubectl get nodes -o wide
+[2025-11-12T23:24:31Z] [DEBUG] Comando exitoso: kubectl get nodes -o wide
+[2025-11-12T23:24:31Z] [DEBUG] Ejecutando: kubectl get pods --all-namespaces -o wide
+[2025-11-12T23:24:32Z] [DEBUG] Comando exitoso: kubectl get pods --all-namespaces -o wide
+[2025-11-12T23:24:32Z] [DEBUG] Ejecutando: kubectl top pods --all-namespaces
+[2025-11-12T23:24:32Z] [DEBUG] Comando exitoso: kubectl top pods --all-namespaces
+[2025-11-12T23:24:32Z] [INFO] 🔍 Realizando auditoría PRE-scheduler...
+[2025-11-12T23:24:32Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: pre_scheduler)
+[2025-11-12T23:24:32Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-12T23:24:32Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-12T23:24:32Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-12T23:24:32Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-12T23:24:32Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-12T23:24:32Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-12T23:24:33Z] [DEBUG] Auditoría PRE-scheduler - verificando prerequisitos...
+[2025-11-12T23:24:33Z] [DEBUG] Verificando metrics-server...
+[2025-11-12T23:24:34Z] [DEBUG] Verificando namespace de test...
+[2025-11-12T23:24:34Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-12T23:24:34Z] [INFO] 🔐 CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-12T23:24:34Z] [INFO] === ENTORNO COMPLETO LISTO PARA TESTS ===
+[2025-11-12T23:24:34Z] [INFO] Iniciando despliegue del scheduler: watch
+[2025-11-12T23:24:34Z] [INFO] 🔐 CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-12T23:24:34Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true
+[2025-11-12T23:24:34Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true
+[2025-11-12T23:24:34Z] [DEBUG] Ejecutando: kubectl apply -f rbac-deploy.yaml
+[2025-11-12T23:24:34Z] [DEBUG] Comando exitoso: kubectl apply -f rbac-deploy.yaml
+[2025-11-12T23:24:34Z] [DEBUG] Ejecutando: kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
+[2025-11-12T23:24:35Z] [DEBUG] Comando exitoso: kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
+[2025-11-12T23:24:35Z] [DEBUG] 📝 Operación registrada: deploy_scheduler -> my-scheduler
+[2025-11-12T23:24:35Z] [INFO] 🔐 CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado
+[2025-11-12T23:24:35Z] [INFO] 🔍 Realizando auditoría POST-scheduler...
+[2025-11-12T23:24:35Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: post_scheduler)
+[2025-11-12T23:24:35Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-12T23:24:35Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-12T23:24:36Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-12T23:24:36Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-12T23:24:36Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-12T23:24:37Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-12T23:24:37Z] [DEBUG] Auditoría POST-scheduler - verificando despliegue...
+[2025-11-12T23:24:37Z] [DEBUG] Verificando despliegue del scheduler personalizado...
+[2025-11-12T23:24:38Z] [DEBUG] Verificando funcionalidad del scheduler...
+[2025-11-12T23:24:45Z] [DEBUG] Scheduler está programando pods correctamente
+[2025-11-12T23:24:45Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-12T23:24:45Z] [INFO] 🔐 CHECKPOINT: setup_completed - Setup completo finalizado - Listo para tests
+[2025-11-12T23:24:45Z] [SUCCESS] === SETUP COMPLETO FINALIZADO EXITOSAMENTE ===
+[2025-11-12T23:24:45Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-12T23:24:45Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-12T23:24:45Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-12T23:24:45Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-12T23:24:46Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-12T23:24:51Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-12T23:24:51Z] [INFO] ✅ Limpieza general completada
+[2025-11-12T23:24:51Z] [DEBUG] Comando exitoso: ./benchmarking_setup.sh watch 20
+[2025-11-12T23:24:51Z] [SUCCESS] Benchmarking completado exitosamente
+[2025-11-12T23:24:51Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-12T23:24:51Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-12T23:24:51Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:51Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:51Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-12T23:24:52Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-12T23:24:53Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-12T23:24:58Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-12T23:24:58Z] [INFO] ✅ Limpieza general completada
+[2025-11-12T23:32:24Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/log/benchmarking.log
+[2025-11-12T23:32:24Z] [DEBUG] Configurando manejo global de señales...

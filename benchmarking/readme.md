@@ -85,3 +85,179 @@ spec:
 
 
 AÜN EN DESARROLLO Y PRUEBAS!!!!
+
+
+
+
+#Glosario de Comandos Kubernetes para el Proyecto
+Este glosario proporciona una referencia rápida para todas las operaciones de monitoreo y troubleshooting necesarias en el proyecto de Kubernetes.
+##Índice de Comandos
+###1. Verificación del Estado del Cluster
+
+* Nodos
+```bash
+# Verificar el estado y información detallada de los nodos
+kubectl get nodes -o wide
+Propósito: Monitorear el estado, roles y capacidad de los nodos del cluster.
+```
+* Estado General del Cluster
+```bash
+# Verificar la información general del cluster
+kubectl cluster-info dump
+
+# Listar todos los recursos de la API disponibles
+kubectl api-resources
+```
+
+###2. Gestión y Monitoreo de Pods
+* Pods en Todos los Namespaces
+```bash
+# Listar todos los pods del cluster
+kubectl get pods --all-namespaces
+
+# Verificar pods en el namespace específico del proyecto
+kubectl get pods -n test-scheduler
+```
+
+* Pods por Estado
+```bash
+# Pods pendientes de programación
+kubectl get pods -n test-scheduler --field-selector=status.phase=Pending
+
+# Pods en ejecución
+kubectl get pods -n test-scheduler --field-selector=status.phase=Running
+
+# Pods fallidos
+kubectl get pods -n test-scheduler --field-selector=status.phase=Failed
+
+# Pods completados exitosamente
+kubectl get pods -n test-scheduler --field-selector=status.phase=Succeeded
+
+# Pods en estado desconocido
+kubectl get pods -n test-scheduler --field-selector=status.phase=Unknown
+```
+
+###3. Scheduler Personalizado
+* Verificación del Scheduler
+```bash
+# Verificar los pods del scheduler personalizado
+kubectl get pods -n kube-system -l app=my-scheduler
+
+# Verificar los logs del scheduler personalizado
+kubectl logs -n kube-system -l app=my-scheduler
+
+# Verificar la configuración del scheduler en los pods
+kubectl get pods -n test-scheduler -o yaml | grep schedulerName
+```
+###4. Monitoreo de Eventos
+Eventos del Namespace
+
+```bash
+# Verificar eventos en el namespace del proyecto
+kubectl get events -n test-scheduler
+
+# Verificar eventos a nivel de todo el cluster
+kubectl get events --all-namespaces
+```
+###5. Gestión de Recursos y Métricas
+*Métricas de Recursos
+```bash
+# Verificar uso de recursos en nodos
+kubectl top nodes
+
+# Verificar uso de recursos en pods del proyecto
+kubectl top pods -n test-scheduler
+
+# Verificar uso de recursos en pods del sistema
+kubectl top pods -n kube-system
+```
+* Límites y Cuotas
+```bash
+# Verificar límites de recursos en namespaces
+kubectl describe namespace test-scheduler
+
+# Verificar cuotas de recursos
+kubectl get resourcequotas --all-namespaces
+
+# Verificar límites en pods específicos
+kubectl describe pod -n test-scheduler <pod-name>
+```
+###6. Componentes del Sistema
+* DaemonSets y Deployments
+```bash
+# Verificar DaemonSets y Deployments en kube-system
+kubectl get daemonsets,deployments -n kube-system
+```
+* Servicios
+```bash
+# Verificar servicios en todos los namespaces
+kubectl get services --all-namespaces
+```
+###7. Almacenamiento
+* Volúmenes Persistentes
+```bash
+# Verificar Persistent Volumes y Claims
+kubectl get pv,pvc --all-namespaces
+
+# Verificar Storage Classes
+kubectl get storageclass
+```
+###8. Redes y Seguridad
+* Network Policies
+```bash
+# Verificar políticas de red
+kubectl get networkpolicies --all-namespaces
+
+# Verificar definiciones de red
+kubectl get netattdefs --all-namespaces
+```
+###9. Logs y Depuración
+* Logs de Pods
+```bash
+# Verificar logs de pods específicos
+kubectl logs -n test-scheduler <pod-name>
+
+# Verificar logs de pods que fallan
+kubectl logs -n test-scheduler <pod-name>
+```
+* Componentes del Control Plane
+```bash
+# Logs del API Server
+kubectl logs -n kube-system kube-apiserver-kind-control-plane
+
+# Logs del Controller Manager
+kubectl logs -n kube-system kube-controller-manager-kind-control-plane
+
+# Logs del Scheduler por defecto
+kubectl logs -n kube-system kube-scheduler-kind-control-plane
+
+# Verificar salud de etcd
+kubectl get endpoints -n kube-system etcd -o yaml
+```
+## Uso en el Proyecto
+- Este glosario es esencial para:
+
+* Monitoreo del Scheduler Personalizado: Verificar que el scheduler esté funcionando correctamente
+
+* Depuración de Problemas: Identificar pods pendientes, fallidos o con problemas de programación
+
+* Optimización de Recursos: Monitorear el uso de CPU y memoria en el cluster
+
+* Validación de Configuración: Verificar que los pods usen el scheduler correcto
+
+* Auditoría del Sistema: Revisar eventos y logs para troubleshooting
+
+- Consejos de Uso
+
+* Para problemas de scheduling, empezar con: 
+```Bash
+kubectl get events -n test-scheduler
+```
+* Para verificar el scheduler personalizado: 
+```Bash
+kubectl logs -n kube-system -l app=my-scheduler
+```
+* Para pods pendientes:
+```Bash 
+ kubectl get pods -n test-scheduler --field-selector=status.phase=Pending
+```

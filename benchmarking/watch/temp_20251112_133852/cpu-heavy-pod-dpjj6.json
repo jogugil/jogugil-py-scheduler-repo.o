@@ -1,0 +1,18 @@
+[1;33m[2025-11-12T12:41:19Z] [WARN] Comando 'jq -n --arg pod_name cpu-heavy-pod-dpjj6 --arg pod_type cpu-heavy --argjson latency 135 --argjson pending_latency [0;34m[2025-11-12T12:41:10Z] [DEBUG] Calculando pending_running_latency para pod: cpu-heavy-pod-dpjj6[0m
+[0;34m[2025-11-12T12:41:10Z] [DEBUG] Pending_running_latency para cpu-heavy-pod-dpjj6: 0 segundos[0m
+0 --argjson pull_latency [0;34m[2025-11-12T12:41:10Z] [DEBUG] Calculando pull_start_latency para pod: cpu-heavy-pod-dpjj6[0m
+[0;34m[2025-11-12T12:41:10Z] [DEBUG] No se pudo calcular pull_start_latency para cpu-heavy-pod-dpjj6[0m
+N/A --argjson cpu [0;34m[2025-11-12T12:41:10Z] --argjson mem [DEBUG] Calculando uso promedio de recursos del scheduler[0m --argjson list_ops [0;34m[2025-11-12T12:41:15Z] [DEBUG] Calculando list_ops para pod: cpu-heavy-pod-dpjj6[0m --argjson retries [0;34m[2025-11-12T12:41:17Z] --argjson implicit_retries [DEBUG] --argjson events Calculando attempts y eventos para pod: cpu-heavy-pod-dpjj6[0m {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }' falló pero se ignora[0m

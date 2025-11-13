@@ -76,7 +76,6 @@ wait_for_image() {
 }
 
 # Carga y construye imagen en todos los nodos
-
 load_image_to_cluster() {
     local IMAGE_NAME=$1
     local BUILD_DIR=$2
@@ -128,6 +127,7 @@ load_image_to_cluster() {
     log "INFO" "Imagen $IMAGE_NAME cargada exitosamente en todos los nodos seleccionados"
     return 0
 }
+
 # Crear clúster nuevo o reiniciar existente
 create_cluster() {
     checkpoint "cluster_creation_start" "Iniciando creación del cluster Kind"
@@ -275,7 +275,7 @@ install_metrics_server() {
 
         log "INFO" "Aplicando manifiesto Metrics Server"
         if ! safe_run "Aplicar metrics-server" kubectl apply -f "$METRICS_SERVER_URL"; then
-            log "ERROR" "No se pudo aplicar metrics-server..."
+            log "WARN" "No se pudo aplicar metrics-server, continuando..."
             return 0
         fi
 
@@ -285,7 +285,7 @@ install_metrics_server() {
 
         log "INFO" "Esperando Metrics Server disponible (timeout 60s)"
         if ! safe_run "Esperar metrics-server" kubectl wait --for=condition=available --timeout=60s deployment/metrics-server -n kube-system &>/dev/null; then
-            log "ERROR" "Metrics Server no disponible después de 60s..."
+            log "WARN" "Metrics Server no disponible después de 60s, continuando..."
         else
             log "INFO" "Metrics Server está disponible"
         fi
@@ -374,10 +374,6 @@ deploy_scheduler() {
 # Ejecución principal con CHECKPOINTS
 # ========================
 
-# ========================
-# Ejecución principal con CHECKPOINTS
-# ========================
-
 main() {
     log "INFO" "=== INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ==="
     checkpoint "setup_start" "Iniciando setup completo del entorno"
@@ -407,26 +403,19 @@ main() {
         log "ERROR" "Fallo en la creación del cluster"
         return 1
     fi
-    # ✅ REGISTRAR OPERACIÓN: Cluster creado
-    register_operation "create_cluster" "kind-cluster"
 
     # Limpiar namespace y recursos antiguos
     if ! clean_namespace; then
         log "ERROR" "Fallo en la limpieza del namespace"
         return 1
     fi
-    # ✅ REGISTRAR OPERACIÓN: Namespace creado
-    register_operation "create_namespace" "$NAMESPACE"
 
-    # Construir y cargar imagen del scheduler - SOLO en control-plane
+    # Construir y cargar imagen del scheduler
     log "INFO" "Construyendo y cargando imagen del scheduler personalizado"
     if ! load_image_to_cluster "$SCHED_IMAGE" "./" "true"; then
         log "ERROR" "Fallo al cargar imagen del scheduler"
         return 1
     fi
-
-    # ✅ REGISTRAR OPERACIÓN: Imagen del scheduler cargada
-    register_operation "load_image_scheduler" "my-py-scheduler"
 
     # Construir y cargar imágenes basic/nginx/CPU/RAM (SOLO CPU PARA PRUEBAS)
     log "INFO" "Construyendo y cargando imágenes de prueba (solo CPU para pruebas)"
@@ -434,49 +423,18 @@ main() {
         log "ERROR" "Fallo al cargar imagen CPU"
         return 1
     fi
-    # ✅ REGISTRAR OPERACIÓN: Imagen de test cargada
-    register_operation "load_image_cpu" "cpu-heavy"
-
-    log "INFO" "Construyendo y cargando imágenes de prueba (solo RAM para pruebas)"
-    if ! load_image_to_cluster "$RAM_IMAGE" "./ram-heavy" "false"; then
-        log "ERROR" "Fallo al cargar imagen CPU"
-        return 1
-    fi
-    # ✅ REGISTRAR OPERACIÓN: Imagen de test cargada
-    register_operation "load_image_cpu" "cpu-heavy"
-
-    log "INFO" "Construyendo y cargando imágenes de prueba (Servidor Web pruebas)"
-    if ! load_image_to_cluster "$NGINX_IMAGE" "./nginx" "false"; then
-        log "ERROR" "Fallo al cargar imagen CPU"
-        return 1
-    fi
-    # ✅ REGISTRAR OPERACIÓN: Imagen de test cargada
-    register_operation "load_image_cpu" "nginx"
-
-    log "INFO" "Construyendo y cargando imágenes de prueba (test -basic pause)"
-    if ! load_image_to_cluster "$BASIC_IMAGE" "./test-basic" "false"; then
-        log "ERROR" "Fallo al cargar imagen CPU"
-        return 1
-    fi
-    # ✅ REGISTRAR OPERACIÓN: Imagen de test cargada
-    register_operation "load_image_cpu" "test-basic"
 
     # Cargamos módulos de métricas
     log "INFO" "Configurando métricas del cluster"
-    install_metrics_server  # Si falla, tenemos que parar
-
-    # ✅ REGISTRAR OPERACIÓN: Metrics Server instalado
-    register_operation "install_metrics_server" "metrics-server"
+    install_metrics_server  # Si falla, continuamos igual
 
     log "INFO" "Mostrando estado actual del cluster"
     show_cluster_info
 
-    # ✅ AUDITORÍA CONTEXTUAL PRE-SCHEDULER
-    log "INFO" "🔍 Realizando auditoría PRE-scheduler..."
-    if ! audit_cluster_health "pre_scheduler"; then
-        log "WARN" "Problemas detectados en la auditoría PRE-scheduler, continuando..."
+    # Auditoría del cluster antes de desplegar scheduler
+    if ! audit_cluster_health; then
+        log "WARN" "Problemas detectados en la auditoría del cluster, continuando..."
     fi
-    checkpoint "pre_scheduler_audit_done" "Auditoría PRE-scheduler completada"
 
     log "INFO" "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
 
@@ -485,38 +443,14 @@ main() {
         log "ERROR" "Fallo en el despliegue del scheduler"
         return 1
     fi
-    # ✅ REGISTRAR OPERACIÓN: Scheduler desplegado
-    register_operation "deploy_scheduler" "my-scheduler"
 
-    # ✅ AUDITORÍA CONTEXTUAL POST-SCHEDULER
-    log "INFO" "🔍 Realizando auditoría POST-scheduler..."
-    if ! audit_cluster_health "post_scheduler"; then
-        log "ERROR" "Problemas críticos en auditoría POST-scheduler"
-        return 1
-    fi
+    # Auditoría final
+    log "INFO" "Realizando auditoría final del cluster"
+    audit_cluster_health
 
     checkpoint "setup_completed" "Setup completo finalizado exitosamente - Listo para tests"
     log "SUCCESS" "=== SETUP COMPLETO FINALIZADO EXITOSAMENTE ==="
-    
-    # ✅ EJECUTAR TESTS DESPUÉS DEL SETUP
-    log "INFO" "🚀 Iniciando ejecución de tests..."
-    
-    # Calcular máximo de pods concurrentes (50% del total o mínimo 5)
-    local max_concurrent=$(( NUM_PODS / 2 ))
-    if [[ $max_concurrent -lt 5 ]]; then
-        max_concurrent=5
-    fi
-    
-    log "INFO" "Parámetros para tests: Scheduler=$SCHED_IMPL, Pods=$NUM_PODS, Concurrentes=$max_concurrent"
-    
-    if safe_run ./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS" "$max_concurrent"; then
-        log "SUCCESS" "=== TESTS COMPLETADOS EXITOSAMENTE ==="
-        return 0
-    else
-        local test_exit_code=$?
-        log "ERROR" "Tests fallaron con código: $test_exit_code"
-        return $test_exit_code
-    fi
+    return 0
 }
 
 # Ejecutar función principal

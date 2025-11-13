@@ -11,3 +11,4 @@ spec:
   containers:
     - name: busy
       image: k8s.gcr.io/pause:3.9
+      imagePullPolicy: Never

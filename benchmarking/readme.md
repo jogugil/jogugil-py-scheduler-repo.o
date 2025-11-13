@@ -91,6 +91,19 @@ AÜN EN DESARROLLO Y PRUEBAS!!!!
 
 # Glosario de Comandos Kubernetes para el Proyecto
 Este glosario proporciona una referencia rápida para todas las operaciones de monitoreo y troubleshooting necesarias en el proyecto de Kubernetes.
+
+## Uso en el Proyecto
+
+* Monitoreo del Scheduler Personalizado: Verificar que el scheduler esté funcionando correctamente
+
+* Depuración de Problemas: Identificar pods pendientes, fallidos o con problemas de programación
+
+* Optimización de Recursos: Monitorear el uso de CPU y memoria en el cluster
+
+* Validación de Configuración: Verificar que los pods usen el scheduler correcto
+
+* Auditoría del Sistema: Revisar eventos y logs para troubleshooting
+
 ## Índice de Comandos
 ### 1. Verificación del Estado del Cluster
 
@@ -234,20 +247,7 @@ kubectl logs -n kube-system kube-scheduler-kind-control-plane
 # Verificar salud de etcd
 kubectl get endpoints -n kube-system etcd -o yaml
 ```
-## Uso en el Proyecto
-- Este glosario es esencial para:
-
-* Monitoreo del Scheduler Personalizado: Verificar que el scheduler esté funcionando correctamente
-
-* Depuración de Problemas: Identificar pods pendientes, fallidos o con problemas de programación
-
-* Optimización de Recursos: Monitorear el uso de CPU y memoria en el cluster
-
-* Validación de Configuración: Verificar que los pods usen el scheduler correcto
-
-* Auditoría del Sistema: Revisar eventos y logs para troubleshooting
-
-- Consejos de Uso
+### Consejos de Uso
 
 * Para problemas de scheduling, empezar con: 
 ```Bash

@@ -92,7 +92,7 @@ AÜN EN DESARROLLO Y PRUEBAS!!!!
 # Glosario de Comandos Kubernetes para el Proyecto
 Este glosario proporciona una referencia rápida para todas las operaciones de monitoreo y troubleshooting necesarias en el proyecto de Kubernetes.
 
-## Uso en el Proyecto
+## Uso en el Proyecto : El proposito es monitorear el estado, los roles y la capacidad de los nodos del cluster entrte otros.
 
 * Monitoreo del Scheduler Personalizado: Verificar que el scheduler esté funcionando correctamente
 
@@ -111,7 +111,6 @@ Este glosario proporciona una referencia rápida para todas las operaciones de m
 ```bash
 # Verificar el estado y información detallada de los nodos
 kubectl get nodes -o wide
-Propósito: Monitorear el estado, roles y capacidad de los nodos del cluster.
 ```
 * Estado General del Cluster
 ```bash

@@ -1,6 +1,4 @@
 
-  GNU nano 7.2                                               readme.md
-#=======================================================
 ## Autores
 
 - **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Propietario y responsable principal del código
@@ -14,8 +12,8 @@ Código fuente bajo **Apache License 2.0**
 
 [![CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/b>
 Documentación, PDFs e imágenes bajo **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
-#===============================================================
-
+#
+#
 
 # Custom Kubernetes Scheduler
 ## Entrega pácticas Asignatura Cloud Computing (CC) - M.U. Computación en la Nube y Altas prestaciones

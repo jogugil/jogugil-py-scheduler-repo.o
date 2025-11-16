@@ -20,7 +20,7 @@ Este script permite crear y gestionar pods de prueba en Kubernetes, controlar la
 
 En este directorio se tienen dos scripts para recrear dos pequeños benchmarking:
 
-* benchmarking_1/ : Script algo más complejo, más verbose y con el cálculo de diversas mñetricas ademñas del consumo de cpu y memoria que me da el servidor de métricas 
+* ***benchmarking_1/*** : Script algo más complejo, más verbose y con el cálculo de diversas mñetricas ademñas del consumo de cpu y memoria que me da el servidor de métricas 
 instaldo en el clúster. 
 Además, mantiene un control de logger y de fichero de métricas en json. 
 ```Bash
@@ -29,7 +29,7 @@ Además, mantiene un control de logger y de fichero de métricas en json.
 Seejecutan a la vez diferntes scripts (logger.sh, benchmarking_setaup.sh). Y mantenemos un script de ejecución de pods y cálculo de métricas (scheduler-test.sh)
 
 
-* benchmarking_2/: Script más simple donde ademñas aparece un menu para poder visualizar los logs y eventos tanto de los pods creados cómo del scheduler personalizado. 
+* ***benchmarking_2/***: Script más simple donde ademñas aparece un menu para poder visualizar los logs y eventos tanto de los pods creados cómo del scheduler personalizado. 
 se ejecuta con :
 ```Bash
 ./start.sh <número de pods en paralelo> <número de pods totales>
@@ -37,7 +37,7 @@ se ejecuta con :
 
 
 
-# Cuesdtiones a tener en cuenta
+# Cuestiones a tener en cuenta
 
 
 Por defecto se crea el cluster con 1 Control Plane y dos workers. Además existe una opción apra recrear otro clúster donde se puede indicar el número 

@@ -1,7 +1,7 @@
 
 ## Autores
 
-- **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Propietario y responsable principal del código
+- **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Colaborador
 - **Javier Díaz León** ([JavierDiazL - javidi2001@gmail.com]) – Colaborador
 - **Francesc** ([cescdovi@gmail.com]) – Colaborador
 

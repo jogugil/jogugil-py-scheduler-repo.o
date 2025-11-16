@@ -1498,7 +1498,7 @@ def choose_node(api, pod):
     print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
     return node
 ```
-Pero ademñas debemos modificar los manifiestos de lso pods para que tengan los labels por los cuales se deben filtar. 
+Pero además debemos modificar los manifiestos de los pods para que tengan los labels por los cuales se deben filtar. 
 
 - Para filtrar nodos por env=prod o para la política de spread (app=<nombre>), el Pod debe tener labels:
 
@@ -1517,16 +1517,158 @@ spec:
   - name: pause
     image: registry.k8s.io/pause:3.9
 ```
---1232-- HAy que modificarlo y probar, sacar imagenes del filtrado o logs 
+Por ejemplo, en la implementación de los **benchmarking** hemos usado ***labels:{app: my-app}*** para simplificar
+el nombnre del scheduler personaizado en los comandos kubernetes. Esto nos permite:
 
-2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes
-before scoring.
+- Identificar fácilmente los recursos de nuestro scheduler personalizado sin depender de nombres específicos
+
+- Simplificar los comandos kubectl en nuestro script
+
+- Hacer nuestro código más mantenible y robusto frente a recreaciones de pods
+
+Por ejemplo, en la implementación de los benchmarking hemos usado app=my-scheduler para simplificar la identificación 
+del scheduler personalizado en los comandos kubernetes, evitando así tener que hardcodear nombres de pods específicos
+ que pueden cambiar entre despliegues.
+
+En los comandos kubectl usamos labels para identificar nuestro scheduler:
+
+```bash
+# En show_scheduler_logs():
+kubectl logs -n kube-system -l app=my-scheduler --tail="$tail_lines"
+
+# En show_scheduler_events():
+SCHEDULER_POD=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[0].metadata.name}')
+
+# En describe_scheduler():
+pods=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[*].metadata.name}')
+```
+
+--1232-- HAy que modificarlo y probar, sacar imagenes del filtrado o logs en el cñódigo de scheduler.py
+
+2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes before scoring.
+
+En nuestro script implementamos taints y tolerations principalmente para el scheduler personalizado. Como sabemos, los 
+control-planes de Kubernetes tienen taints por defecto que evitan que pods normales se ejecuten en ellos, pero nuestro 
+custom scheduler necesita estar en el control-plane para acceder a los recursos del cluster. Para ello, El archivo 
+**rbac-deploy.yaml** que aplicamos contiene las tolerations necesarias. Sin estas tolerations, el pod de nuestro scheduler 
+quedaría en estado Pending:
+
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: my-scheduler}
+  template:
+    metadata:
+      labels: {app: my-scheduler}
+    spec:
+      serviceAccountName: my-scheduler
+      nodeSelector:
+        kubernetes.io/hostname: sched-lab-control-plane
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: scheduler
+        imagePullPolicy: Never
+        image: my-py-scheduler:latest
+        args: ["--scheduler-name","my-scheduler"]
+```
+
 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
+
+Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos
+usado esta estrategia. Por ejemplo:
+
+- **En la creación de pods**:
+
+```bash
+create_single_pod() {
+    local pod_name=$1
+    local attempt=0
+    local max_attempts=3  # ← Máximo de reintentos configurado por nosotros
+    
+    while [ $attempt -lt $max_attempts ]; do
+        # Intentamos crear el pod
+        if kubectl apply -n "$NAMESPACE" -f - >/dev/null 2>&1; then
+            # Esperamos con backoff implícito
+            local wait_attempt=0
+            while [ $wait_attempt -lt 10 ]; do
+                if kubectl get pod "$pod_name" -n "$NAMESPACE" >/dev/null 2>&1; then
+                    return 0
+                fi
+                sleep 1  # ← Espera entre verificaciones
+                ((wait_attempt++))
+            done
+        fi
+        attempt=$((attempt + 1))
+        sleep 2  # ← Backoff simple entre reintentos
+    done
+}
+```
+
+- **En la creación del cluster**:
+
+```bash
+create_kind_cluster() {
+    local retries=3      # ← Reintentos configurados por nosotros
+    local attempt=1
+
+    while [[ $attempt -le $retries ]]; do
+        if kind create cluster --name "$cluster" --config "$config_file"; then
+            return 0
+        else
+            echo "Reintentando creación del cluster ($attempt/$retries)..."
+        fi
+        ((attempt++))
+        sleep 2  # ← Backoff entre reintentos
+    done
+    return 1
+}
+```
+--123-- Faltaria implementar en el scheduler.py
+
 4. Spread policy Distribute similar Pods evenly across Nodes.
+
+Del mismo modo, implementamos una política de distribución mediante round-robin en nuestro script. Se pùed ver en 
+la función ***load_pods_from_yaml*** del script **bechmarking_2/start.sh**:
+
+```bash
+create_pods_from_yaml() {
+    local dirs_array=("cpu-heavy" "ram-heavy" "nginx" "test-basic")
+    
+    # Distribuimos uniformemente entre diferentes tipos de pods
+    load_pods_from_yaml dirs_array "$total_pods" "$mode" "$parallel"
+}
+
+load_pods_from_yaml() {
+    local -n DIRS=$1
+    local total_pods=$2
+
+    while [[ $counter -lt $total_pods ]]; do
+        for ((i=1;i<=batch;i++)); do
+            # ← Nuestra política de spread: round-robin entre tipos
+            dir_index=$(( (counter + i - 1) % ${#DIRS[@]} ))
+            pod_yaml="${DIRS[$dir_index]}/${DIRS[$dir_index]}-pod.yaml"
+        done
+        counter=$((counter + batch))
+    done
+}
+```
+Pero lo suyo e ideal es implementarlo en el scheduler.py, auqnue con este script ayudaría también a la redistribución 
+de la carga. 
 
 ### ✅ **Checkpoint 5:**
 ***Demonstrate your extended policy via pod logs and placement.***
 
+Ver logs de los scripts **benchmarking_2/start.sh** --123--
 
 # 🧠Reflection Discussion
 

@@ -1,3 +1,49 @@
+#=======================================================
+## Autores
+
+- **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Propietario y responsable principal del código  
+- **Javier Díaz León** ([JavierDiazL - javidi2001@gmail.com]) – Colaborador  
+- **Francesc** ([cescdovi@gmail.com]) – Colaborador  
+
+## Licencias
+
+[![Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)  
+Código fuente bajo **Apache License 2.0**  
+
+[![CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)  
+Documentación, PDFs e imágenes bajo **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
+#===============================================================
+
+## Descripción
+
+Este script permite crear y gestionar pods de prueba en Kubernetes, controlar la concurrencia, monitorizar el estado y limitar recursos de CPU y memoria para pruebas de estrés.
+
+En este directorio se tienen dos scripts para recrear dos pequeños benchmarking:
+
+* benchmarking_1/ : Script algo más complejo, más verbose y con el cálculo de diversas mñetricas ademñas del consumo de cpu y memoria que me da el servidor de métricas 
+instaldo en el clúster. 
+Además, mantiene un control de logger y de fichero de métricas en json. 
+```Bash
+./run_benchmarking.sh <número de pods en paralelo> <número de pods totales>
+```
+Seejecutan a la vez diferntes scripts (logger.sh, benchmarking_setaup.sh). Y mantenemos un script de ejecución de pods y cálculo de métricas (scheduler-test.sh)
+
+
+* benchmarking_2/: Script más simple donde ademñas aparece un menu para poder visualizar los logs y eventos tanto de los pods creados cómo del scheduler personalizado. 
+se ejecuta con :
+```Bash
+./start.sh <número de pods en paralelo> <número de pods totales>
+```
+
+
+
+# Cuesdtiones a tener en cuenta
+
+
+Por defecto se crea el cluster con 1 Control Plane y dos workers. Además existe una opción apra recrear otro clúster donde se puede indicar el número 
+de workers y de pods a ejecutar. 
+En este script se límita las máteicas al consumo de cpu y de memoria Ram.
+
 Pequeño benchmarking que carga diferentes Pods con contenedores de dferete carga cpu, Ram, y operaciones para poder contratar un poco mejor lso diferntes tipos de schedulers  implementados (polling vs watch).
 
 En nuestro ejemplo tendremos tres nodos:
@@ -83,6 +129,82 @@ spec:
         args: ["--scheduler-name","my-scheduler"]
 ```
 
+
+### Limitación número de **workers** y númerop de **pods*
+
+Hemos limitado el número de workers y pods mediante las variables **DEFAULT_WORKERS**, **MAX_TOTAL_PODS** 
+y **MAX_PARALLEL_PODS**, porque en numerosas ocasiones al crear el clúster los procesos se terminaban abruptamente 
+mostrando el **código de salida 137**, debido a falta de memoria en el host (OOM Killer).
+
+
+Intentamos implementar una función (limit_worker_resources()) para limitar CPU y memoria directamente en los nodos worker, 
+pero no tuvimos éxito en todos los casos. Por ello, actualmente solo limitamos los pods a través de su manifiesto, utilizando 
+las secciones resources.requests y resources.limits para definir memoria y CPU:
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "0.2"
+  limits:
+    memory: "512Mi"
+    cpu: "0.5"
+```
+
+```bash
+limit_worker_resources() {
+    local cluster="$1"
+    local cpu="$2"
+    local mem="$3"
+
+    # Convertir memoria a bytes para docker (ej: 2Gi -> 2147483648)
+    local mem_bytes
+    mem_clean=$(echo "$mem" | sed 's/MiB/Mi/I' | sed 's/GiB/Gi/I')
+    mem_bytes=$(numfmt --from=iec "$mem_clean" 2>/dev/null)
+    if [[ -z "$mem_bytes" ]]; then
+        echo "ERROR: No se pudo convertir la memoria '$mem'."
+        return 1
+    fi
+
+    # Obtener lista de contenedores Docker que sean workers
+    local worker_nodes
+    worker_nodes=$(docker ps --format '{{.Names}}' | grep "^${cluster}-worker")
+    if [[ -z "$worker_nodes" ]]; then
+        echo "No se encontraron nodos worker para el clúster '$cluster'."
+        return 1
+    fi
+
+    echo "Limitando recursos de los nodos worker del clúster '$cluster': CPU=$cpu, MEM=$mem"
+
+    for node in $worker_nodes; do
+        # Ajustamos memoria y memory-swap al mismo tiempo
+        if docker update --cpus="$cpu" --memory="$mem_bytes" --memory-swap="$mem_bytes" "$node"; then
+            echo "Nodo worker $node limitado correctamente."
+        else
+            echo "WARNING: No se pudo limitar los recursos de $node."
+        fi
+    done
+
+    echo "Recursos limitados para todos los workers del clúster '$cluster'."
+    return 0
+}
+```
+
+
+Además, seguimos limitando el número de workers y pods mediante las variables DEFAULT_WORKERS, MAX_TOTAL_PODS y MAX_PARALLEL_PODS, ya que en varias ocasiones la creación del clúster terminaba abruptamente con código de salida 137 por falta de memoria en el host.
+
+***Ejemplo código del error:***
+
+```Bash
+ kubectl get pod cpu-heavy-pod-hpp2g -n test-scheduler -o json | jq '.status.containerStatuses[0].state.terminated'
+{
+  "containerID": "containerd://af57843a3912b9c56fe1fcdf59124a960c748e0906a9fb77af2dc55bb27707f2",
+  "exitCode": 137,
+  "finishedAt": "2025-11-16T11:43:41Z",
+  "reason": "Error",
+  "startedAt": "2025-11-16T11:43:39Z"
+}
+```
 
 AÜN EN DESARROLLO Y PRUEBAS!!!!
 

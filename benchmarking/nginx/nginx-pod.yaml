@@ -6,9 +6,9 @@ metadata:
   labels:
     app: test-nginx
 spec:
+  schedulerName: my-scheduler
+  restartPolicy: Never
   containers:
   - name: nginx
     image: nginx:latest
     imagePullPolicy: Never
-  schedulerName: my-scheduler
-  restartPolicy: Never

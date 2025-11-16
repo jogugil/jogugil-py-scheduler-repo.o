@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  generateName: ram-heavy-pod-
+  generateName: cpu-heavy-pod-
   namespace: test-scheduler
   labels:
-    app: ram-heavy
+    app: cpu-heavy
 spec:
   schedulerName: my-scheduler
   restartPolicy: Never
   containers:
-  - name: ram-heavy
-    image: ram-heavy:latest
+  - name: cpu-heavy
+    image: cpu-heavy:latest
     imagePullPolicy: Never
     resources:
       requests:
-        memory: "256Mi"
-        cpu: "0.2"
+        memory: "128Mi"
+        cpu: "0.1"
       limits:
-        memory: "512Mi"
-        cpu: "0.5"
+        memory: "256Mi"
+        cpu: "0.25"

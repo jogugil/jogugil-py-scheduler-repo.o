@@ -1,7 +1,0 @@
-{
-  "test_timestamp": "2025-11-10T18:52:27Z",
-  "scheduler_implementation": "polling",
-  "pods_per_type": 20,
-  "pod_metrics": [],
-  "aggregate_metrics": {}
-}

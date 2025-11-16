@@ -1,4 +1,3 @@
-#=======================================================
 ## Autores
 
 - **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Propietario y responsable principal del código  
@@ -12,9 +11,9 @@ Código fuente bajo **Apache License 2.0**
 
 [![CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)  
 Documentación, PDFs e imágenes bajo **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
-#===============================================================
 
 ## Descripción
+
 
 Este script permite crear y gestionar pods de prueba en Kubernetes, controlar la concurrencia, monitorizar el estado y limitar recursos de CPU y memoria para pruebas de estrés.
 
@@ -34,8 +33,27 @@ se ejecuta con :
 ```Bash
 ./start.sh <número de pods en paralelo> <número de pods totales>
 ```
+En el directorio de este script tenemos la implementación del código **scheduler.py** asociado al scheudler personalizado
+tipo **watch**. Notar que para que funcione el script a parte del ódigo python del scheduler debemos tener:
 
-
+ - Dockerfile (imagen del scheduler personalizado en local)
+ - kind-cluster.yam (manifiesto para crear el clúster personalizado)
+ - rbac-deploy.yaml (manifiesto para el scheduler personalizado y la autenticación)
+ - recreate_cluster (subdirectorio donxe se gusardan lso manifiestos recreados de forma dinámica)
+ - subdirectorios con los Dokerfile's y manifiestos de los Pod's
+         cpu-heavy/
+                 Dockerfile
+                 cpu-heavy-pod.yaml
+         nginx/
+               Dockerfile
+               nginx-pod.yaml
+         ram-heavy/
+               Dockerfile
+               ram-heavy-pod.yaml
+         test-basic/
+              Dockerfile
+              test-basic-pod.yaml
+         
 
 # Cuestiones a tener en cuenta
 

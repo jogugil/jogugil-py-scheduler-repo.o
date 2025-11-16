@@ -1163,6 +1163,14 @@ create_pods_and_scheduler() {
    create_pods_from_yaml
 }
 
+
+# Hemos implementado una política de distribución en la creación de pods mediante un algoritmo round-robin 
+# que intercala los tipos de pods. Esto lo hacemos para evitar que se creen muchos pods del mismo tipo consecutivamente, 
+# lo que podría llevar a una distribución desigual en los nodos si el scheduler no tiene en cuenta la diversidad 
+# de recursos.
+# --123-- Esto hay que implementarlo dentro de scheduler.py porque el scheduler puede, segun la carga, asignar al mismo nodo 
+# pods del mismo tipo. PEro se tendría la mísma filosofía.
+
 load_pods_from_yaml() {
     local -n DIRS=$1
     local total_pods=$2

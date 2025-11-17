@@ -9,13 +9,6 @@ spec:
   schedulerName: my-scheduler
   restartPolicy: Never
   containers:
-  - name: busy
-    image: k8s.gcr.io/pause:3.9
+  - name: test-basic
+    image: test-basic:latest   # aquí pones tu imagen local
     imagePullPolicy: Never
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "0.05"
-      limits:
-        memory: "128Mi"
-        cpu: "0.1"

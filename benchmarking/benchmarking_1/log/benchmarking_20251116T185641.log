@@ -1,0 +1,38 @@
+[2025-11-16T18:56:32Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-16T18:56:32Z] [INFO] Fecha: 2025-11-16T18:56:32Z
+[2025-11-16T18:56:32Z] [INFO] Parámetros recibidos: ç
+[2025-11-16T18:56:32Z] [INFO] Usando scheduler: ç, pods por defecto: 20
+[2025-11-16T18:56:32Z] [ERROR] Scheduler debe ser 'watch' o 'polling', no 'ç'
+[2025-11-16T18:56:32Z] [ERROR] Script terminado con error: 1
+[2025-11-16T18:56:32Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-16T18:56:32Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T18:56:32Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T18:56:32Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-16T18:56:32Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T18:56:32Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-16T18:56:32Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:32Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:32Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T18:56:33Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T18:56:34Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T18:56:34Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T18:56:34Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-16T18:56:34Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:34Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:34Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:34Z] [WARN] Comando falló (130): kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T18:56:34Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T18:56:35Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T18:56:35Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T18:56:35Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T18:56:35Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T18:56:36Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T18:56:36Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-16T18:56:36Z] [INFO] ✅ Limpieza general completada
+[2025-11-16T18:56:41Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/benchmarking_1/log/benchmarking.log
+[2025-11-16T18:56:41Z] [DEBUG] Configurando manejo global de señales...

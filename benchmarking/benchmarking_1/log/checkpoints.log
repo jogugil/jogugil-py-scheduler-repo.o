@@ -1,0 +1,117 @@
+[2025-11-16T18:52:58Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T18:52:58Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T18:56:41Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T18:56:41Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T18:56:41Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T18:57:24Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T18:57:24Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T18:57:25Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T18:58:22Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T18:59:05Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T18:59:09Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T18:59:09Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T18:59:11Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T18:59:20Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:10:28Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:10:29Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:10:29Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:11:08Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:11:08Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:11:09Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T19:11:54Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T19:12:39Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T19:12:42Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T19:12:42Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T19:12:44Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T19:12:53Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:18:18Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:18:18Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:18:18Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:18:56Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:18:56Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:18:58Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T19:20:15Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T19:21:43Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T19:21:47Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T19:21:47Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T19:21:49Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T19:21:59Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:34:11Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:34:11Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:34:11Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:34:28Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:34:28Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:34:28Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:35:01Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:35:01Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:35:02Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T19:35:45Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T19:36:39Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T19:36:44Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T19:36:44Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T19:36:45Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T19:36:54Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:44:36Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:44:37Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:44:37Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:45:17Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:45:17Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:45:18Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T19:47:35Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T19:48:29Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T19:48:34Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T19:48:34Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T19:48:35Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T19:48:44Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:59:01Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:59:01Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:59:01Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:59:39Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:59:40Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:59:40Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T20:00:25Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T20:01:19Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T20:01:23Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T20:01:23Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T20:01:24Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T20:01:34Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T20:03:57Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T20:03:57Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T20:03:57Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T20:04:37Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T20:04:37Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T20:04:38Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T20:05:23Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T20:06:06Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T20:06:10Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T20:06:10Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T20:06:12Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T20:06:21Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T20:09:17Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T20:09:17Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T20:09:17Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T20:09:58Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T20:09:58Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T20:09:59Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T20:12:14Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T20:12:57Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T20:13:01Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T20:13:01Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T20:13:03Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T20:13:12Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T20:13:26Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T20:13:26Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T20:13:26Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T20:20:27Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T20:20:27Z] CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T20:20:27Z] CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T20:21:03Z] CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T20:21:03Z] CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T20:21:04Z] CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T20:21:53Z] CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T20:22:47Z] CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T20:22:52Z] CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T20:22:52Z] CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T20:22:53Z] CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T20:23:02Z] CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-17T18:49:30Z] CHECKPOINT: setup_start - Iniciando setup completo del entorno

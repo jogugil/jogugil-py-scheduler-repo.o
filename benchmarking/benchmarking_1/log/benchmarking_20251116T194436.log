@@ -1,0 +1,631 @@
+[2025-11-16T19:34:28Z] [INFO] ================== INICIO DE EJECUCIÓN ==================
+[2025-11-16T19:34:28Z] [INFO] Fecha: 2025-11-16T19:34:28Z
+[2025-11-16T19:34:28Z] [INFO] Parámetros recibidos: 
+[2025-11-16T19:34:28Z] [WARN] No se pasaron parámetros, usando valores por defecto: watch 20
+[2025-11-16T19:34:28Z] [INFO] 🚀 Iniciando benchmarking setup...
+[2025-11-16T19:34:28Z] [INFO] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: ./benchmarking_setup.sh watch 20
+[2025-11-16T19:34:28Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/benchmarking_1/log/benchmarking.log
+[2025-11-16T19:34:28Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-16T19:34:28Z] [SUCCESS] === INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ===
+[2025-11-16T19:34:28Z] [INFO] 🔐 CHECKPOINT: setup_start - Iniciando setup completo del entorno
+[2025-11-16T19:34:28Z] [INFO] Limpiando imágenes y contenedores locales
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: docker image rm -f cpu-heavy:latest ram-heavy:latest my-py-scheduler:latest
+[2025-11-16T19:34:28Z] [DEBUG] Comando exitoso: Limpiar imágenes locales
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: docker container prune -f
+[2025-11-16T19:34:28Z] [DEBUG] Comando exitoso: Limpiar contenedores
+[2025-11-16T19:34:28Z] [INFO] Scheduler seleccionado por parámetro: watch
+[2025-11-16T19:34:28Z] [INFO] Variante de scheduler seleccionada: watch
+[2025-11-16T19:34:28Z] [INFO] 🔐 CHECKPOINT: scheduler_selected - Scheduler watch seleccionado
+[2025-11-16T19:34:28Z] [INFO] Copiando scheduler-watch desde ../../variants/watch-skeleton/scheduler.py
+[2025-11-16T19:34:28Z] [DEBUG] Scheduler watch copiado exitosamente
+[2025-11-16T19:34:28Z] [INFO] Scheduler copiado exitosamente a ./scheduler.py
+[2025-11-16T19:34:28Z] [INFO] Copiando archivos de configuración al directorio actual
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: cp ../../Dockerfile ./Dockerfile
+[2025-11-16T19:34:28Z] [DEBUG] Comando exitoso: Copiar Dockerfile
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: cp ../../requirements.txt ./requirements.txt
+[2025-11-16T19:34:28Z] [DEBUG] Comando exitoso: Copiar requirements
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: cp ../../rbac-deploy.yaml ./rbac-deploy.yaml
+[2025-11-16T19:34:28Z] [DEBUG] Comando exitoso: Copiar RBAC
+[2025-11-16T19:34:28Z] [INFO] 🔐 CHECKPOINT: cluster_creation_start - Iniciando creación del cluster Kind
+[2025-11-16T19:34:28Z] [INFO] Creando nuevo cluster sched-lab
+[2025-11-16T19:34:28Z] [DEBUG] Ejecutando: kind create cluster --name sched-lab --config kind-cluster.yaml
+[2025-11-16T19:35:01Z] [DEBUG] Comando exitoso: Crear cluster Kind
+[2025-11-16T19:35:01Z] [INFO] Cluster sched-lab creado exitosamente
+[2025-11-16T19:35:01Z] [INFO] Esperando que nodo control-plane esté en estado Ready
+[2025-11-16T19:35:01Z] [INFO] Nodo control-plane está Ready y operativo
+[2025-11-16T19:35:01Z] [INFO] 🔐 CHECKPOINT: cluster_created - Cluster Kind creado y nodo control-plane listo
+[2025-11-16T19:35:01Z] [DEBUG] 📝 Operación registrada: create_cluster -> kind-cluster
+[2025-11-16T19:35:01Z] [INFO] 🔐 CHECKPOINT: namespace_cleanup_start - Limpiando namespace test-scheduler
+[2025-11-16T19:35:01Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:35:02Z] [DEBUG] Comando exitoso: Limpiar pods del namespace
+[2025-11-16T19:35:02Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:35:02Z] [DEBUG] Comando exitoso: Limpiar deployments del namespace
+[2025-11-16T19:35:02Z] [INFO] Creando namespace test-scheduler
+[2025-11-16T19:35:02Z] [DEBUG] Ejecutando: kubectl create namespace test-scheduler
+[2025-11-16T19:35:02Z] [DEBUG] Comando exitoso: Crear namespace
+[2025-11-16T19:35:02Z] [INFO] 🔐 CHECKPOINT: namespace_cleaned - Namespace test-scheduler limpio y listo
+[2025-11-16T19:35:02Z] [DEBUG] 📝 Operación registrada: create_namespace -> test-scheduler
+[2025-11-16T19:35:02Z] [INFO] Construyendo y cargando imagen del scheduler personalizado
+[2025-11-16T19:35:02Z] [INFO] Iniciando construcción de imagen [my-py-scheduler:latest] desde directorio [./]
+[2025-11-16T19:35:07Z] [INFO] Imagen my-py-scheduler:latest construida exitosamente
+[2025-11-16T19:35:07Z] [INFO] Cargando imagen my-py-scheduler:latest en nodo control-plane: [sched-lab-control-plane]
+[2025-11-16T19:35:15Z] [INFO] Esperando imagen my-py-scheduler:latest en nodo sched-lab-control-plane
+[2025-11-16T19:35:15Z] [INFO] Imagen my-py-scheduler:latest cargada correctamente en nodo sched-lab-control-plane
+[2025-11-16T19:35:15Z] [INFO] Imagen my-py-scheduler:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-16T19:35:15Z] [DEBUG] 📝 Operación registrada: load_image_scheduler -> my-py-scheduler
+[2025-11-16T19:35:15Z] [INFO] Construyendo y cargando imágenes de prueba (solo CPU para pruebas)
+[2025-11-16T19:35:15Z] [INFO] Iniciando construcción de imagen [cpu-heavy:latest] desde directorio [./cpu-heavy]
+[2025-11-16T19:35:15Z] [INFO] Imagen cpu-heavy:latest construida exitosamente
+[2025-11-16T19:35:15Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-16T19:35:25Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker
+[2025-11-16T19:35:25Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-16T19:35:25Z] [INFO] Cargando imagen cpu-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-16T19:35:34Z] [INFO] Esperando imagen cpu-heavy:latest en nodo sched-lab-worker2
+[2025-11-16T19:35:35Z] [INFO] Imagen cpu-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-16T19:35:35Z] [INFO] Imagen cpu-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-16T19:35:35Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> cpu-heavy
+[2025-11-16T19:35:35Z] [INFO] Construyendo y cargando imágenes de prueba (solo RAM para pruebas)
+[2025-11-16T19:35:35Z] [INFO] Iniciando construcción de imagen [ram-heavy:latest] desde directorio [./ram-heavy]
+[2025-11-16T19:35:35Z] [INFO] Imagen ram-heavy:latest construida exitosamente
+[2025-11-16T19:35:35Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker]
+[2025-11-16T19:35:39Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker
+[2025-11-16T19:35:39Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-16T19:35:39Z] [INFO] Cargando imagen ram-heavy:latest en nodo worker: [sched-lab-worker2]
+[2025-11-16T19:35:42Z] [INFO] Esperando imagen ram-heavy:latest en nodo sched-lab-worker2
+[2025-11-16T19:35:42Z] [INFO] Imagen ram-heavy:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-16T19:35:42Z] [INFO] Imagen ram-heavy:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-16T19:35:42Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> cpu-heavy
+[2025-11-16T19:35:42Z] [INFO] Construyendo y cargando imágenes de prueba (Servidor Web pruebas)
+[2025-11-16T19:35:42Z] [INFO] Iniciando construcción de imagen [nginx:latest] desde directorio [./nginx]
+[2025-11-16T19:35:42Z] [INFO] Imagen nginx:latest construida exitosamente
+[2025-11-16T19:35:42Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker]
+[2025-11-16T19:35:43Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker
+[2025-11-16T19:35:43Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker
+[2025-11-16T19:35:43Z] [INFO] Cargando imagen nginx:latest en nodo worker: [sched-lab-worker2]
+[2025-11-16T19:35:43Z] [INFO] Esperando imagen nginx:latest en nodo sched-lab-worker2
+[2025-11-16T19:35:43Z] [INFO] Imagen nginx:latest cargada correctamente en nodo sched-lab-worker2
+[2025-11-16T19:35:43Z] [INFO] Imagen nginx:latest cargada exitosamente en todos los nodos seleccionados
+[2025-11-16T19:35:43Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> nginx
+[2025-11-16T19:35:43Z] [INFO] Construyendo y cargando imágenes de prueba (test -basic pause)
+[2025-11-16T19:35:43Z] [INFO] Iniciando construcción de imagen [pause:3.9] desde directorio [./test-basic]
+[2025-11-16T19:35:44Z] [INFO] Imagen pause:3.9 construida exitosamente
+[2025-11-16T19:35:44Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker]
+[2025-11-16T19:35:45Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker
+[2025-11-16T19:35:45Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker
+[2025-11-16T19:35:45Z] [INFO] Cargando imagen pause:3.9 en nodo worker: [sched-lab-worker2]
+[2025-11-16T19:35:45Z] [INFO] Esperando imagen pause:3.9 en nodo sched-lab-worker2
+[2025-11-16T19:35:45Z] [INFO] Imagen pause:3.9 cargada correctamente en nodo sched-lab-worker2
+[2025-11-16T19:35:45Z] [INFO] Imagen pause:3.9 cargada exitosamente en todos los nodos seleccionados
+[2025-11-16T19:35:45Z] [DEBUG] 📝 Operación registrada: load_image_cpu -> test-basic
+[2025-11-16T19:35:45Z] [INFO] Configurando métricas del cluster
+[2025-11-16T19:35:45Z] [INFO] 🔐 CHECKPOINT: metrics_server_start - Instalando Metrics Server
+[2025-11-16T19:35:45Z] [INFO] Comprobando si Metrics Server ya está instalado
+[2025-11-16T19:35:46Z] [INFO] Descargando imagen Metrics Server localmente
+[2025-11-16T19:35:46Z] [DEBUG] Ejecutando: docker pull registry.k8s.io/metrics-server/metrics-server:v0.6.3
+[2025-11-16T19:35:47Z] [DEBUG] Comando exitoso: Descargar imagen metrics-server
+[2025-11-16T19:35:47Z] [INFO] Cargando imagen Metrics Server en todos los nodos Kind
+[2025-11-16T19:35:47Z] [INFO] Cargando imagen en sched-lab-worker
+[2025-11-16T19:35:47Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker
+[2025-11-16T19:35:51Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-16T19:35:51Z] [INFO] Cargando imagen en sched-lab-control-plane
+[2025-11-16T19:35:51Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-control-plane
+[2025-11-16T19:35:54Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-16T19:35:54Z] [INFO] Cargando imagen en sched-lab-worker2
+[2025-11-16T19:35:54Z] [DEBUG] Ejecutando: kind load docker-image registry.k8s.io/metrics-server/metrics-server:v0.6.3 --name sched-lab --nodes sched-lab-worker2
+[2025-11-16T19:35:58Z] [DEBUG] Comando exitoso: Cargar metrics-server en nodo
+[2025-11-16T19:35:58Z] [INFO] Aplicando manifiesto Metrics Server
+[2025-11-16T19:35:58Z] [DEBUG] Ejecutando: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml
+[2025-11-16T19:35:59Z] [DEBUG] Comando exitoso: Aplicar metrics-server
+[2025-11-16T19:35:59Z] [INFO] Parcheando TLS inseguro
+[2025-11-16T19:35:59Z] [DEBUG] Ejecutando: kubectl patch deployment metrics-server -n kube-system --type=json -p=[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]
+[2025-11-16T19:36:00Z] [DEBUG] Comando exitoso: Parchear metrics-server
+[2025-11-16T19:36:00Z] [INFO] Esperando Metrics Server disponible (timeout 60s)
+[2025-11-16T19:36:00Z] [DEBUG] Ejecutando: kubectl wait --for=condition=available --timeout=60s deployment/metrics-server -n kube-system
+[2025-11-16T19:36:29Z] [DEBUG] Comando exitoso: Esperar metrics-server
+[2025-11-16T19:36:29Z] [INFO] Metrics Server está disponible
+[2025-11-16T19:36:29Z] [INFO] Pausa de 10 segundos para estabilizar
+[2025-11-16T19:36:39Z] [INFO] 🔐 CHECKPOINT: metrics_server_installed - Metrics Server instalado y configurado
+[2025-11-16T19:36:39Z] [DEBUG] 📝 Operación registrada: install_metrics_server -> metrics-server
+[2025-11-16T19:36:39Z] [INFO] Mostrando estado actual del cluster
+[2025-11-16T19:36:39Z] [INFO] Mostrando información del cluster
+[2025-11-16T19:36:39Z] [INFO] === Listing all Kind clusters ===
+[2025-11-16T19:36:39Z] [DEBUG] Ejecutando: kind get clusters
+[2025-11-16T19:36:39Z] [DEBUG] Comando exitoso: Listar clusters Kind
+[2025-11-16T19:36:39Z] [INFO] === Showing nodes and status ===
+[2025-11-16T19:36:39Z] [DEBUG] Ejecutando: kubectl get nodes -o wide
+[2025-11-16T19:36:40Z] [DEBUG] Comando exitoso: Listar nodos
+[2025-11-16T19:36:40Z] [INFO] === Cluster info ===
+[2025-11-16T19:36:40Z] [DEBUG] Ejecutando: kubectl cluster-info
+[2025-11-16T19:36:40Z] [DEBUG] Comando exitoso: Info del cluster
+[2025-11-16T19:36:40Z] [INFO] === Listing namespaces ===
+[2025-11-16T19:36:40Z] [DEBUG] Ejecutando: kubectl get ns
+[2025-11-16T19:36:40Z] [DEBUG] Comando exitoso: Listar namespaces
+[2025-11-16T19:36:40Z] [INFO] === Listing all pods in all namespaces ===
+[2025-11-16T19:36:40Z] [DEBUG] Ejecutando: kubectl get pods --all-namespaces -o wide
+[2025-11-16T19:36:41Z] [DEBUG] Comando exitoso: Listar todos los pods
+[2025-11-16T19:36:41Z] [INFO] === Checking images on each node ===
+[2025-11-16T19:36:41Z] [INFO] Imágenes en nodo sched-lab-worker:
+[2025-11-16T19:36:41Z] [DEBUG] Ejecutando: docker exec sched-lab-worker crictl images
+[2025-11-16T19:36:41Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-16T19:36:41Z] [INFO] Imágenes en nodo sched-lab-control-plane:
+[2025-11-16T19:36:41Z] [DEBUG] Ejecutando: docker exec sched-lab-control-plane crictl images
+[2025-11-16T19:36:41Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-16T19:36:41Z] [INFO] Imágenes en nodo sched-lab-worker2:
+[2025-11-16T19:36:41Z] [DEBUG] Ejecutando: docker exec sched-lab-worker2 crictl images
+[2025-11-16T19:36:41Z] [DEBUG] Comando exitoso: Listar imágenes en nodo
+[2025-11-16T19:36:41Z] [INFO] === Current pod metrics ===
+[2025-11-16T19:36:41Z] [DEBUG] Ejecutando: kubectl top pods --all-namespaces
+[2025-11-16T19:36:41Z] [DEBUG] Comando exitoso: Métricas de pods
+[2025-11-16T19:36:41Z] [INFO] 🔍 Realizando auditoría PRE-scheduler...
+[2025-11-16T19:36:41Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: pre_scheduler)
+[2025-11-16T19:36:41Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-16T19:36:41Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-16T19:36:42Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-16T19:36:42Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-16T19:36:42Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-16T19:36:43Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-16T19:36:43Z] [DEBUG] Auditoría PRE-scheduler - verificando prerequisitos...
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imagen my-py-scheduler...
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imagen del scheduler SOLO en control-plane...
+[2025-11-16T19:36:43Z] [DEBUG] ❌ Imagen my-py-scheduler NO encontrada en sched-lab-control-plane
+[2025-11-16T19:36:43Z] [WARN] Imagen del scheduler no encontrada en nodos
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imagenes propias para el test ...
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imágenes de test en workers (método simple)...
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imágenes en sched-lab-worker:
+[2025-11-16T19:36:43Z] [DEBUG] ✅ cpu-heavy encontrada en sched-lab-worker
+[2025-11-16T19:36:43Z] [DEBUG] ✅ ram-heavy encontrada en sched-lab-worker
+[2025-11-16T19:36:43Z] [DEBUG] ✅ nginx encontrada en sched-lab-worker
+[2025-11-16T19:36:43Z] [DEBUG] ✅ pause encontrada en sched-lab-worker
+[2025-11-16T19:36:43Z] [DEBUG] Verificando imágenes en sched-lab-worker2:
+[2025-11-16T19:36:43Z] [DEBUG] ✅ cpu-heavy encontrada en sched-lab-worker2
+[2025-11-16T19:36:43Z] [DEBUG] ✅ ram-heavy encontrada en sched-lab-worker2
+[2025-11-16T19:36:43Z] [DEBUG] ✅ nginx encontrada en sched-lab-worker2
+[2025-11-16T19:36:43Z] [DEBUG] ✅ pause encontrada en sched-lab-worker2
+[2025-11-16T19:36:43Z] [INFO] ✅ Todas las imágenes de test encontradas en workers
+[2025-11-16T19:36:43Z] [DEBUG] Verificando metrics-server...
+[2025-11-16T19:36:43Z] [DEBUG] Verificando metrics-server...
+[2025-11-16T19:36:44Z] [DEBUG] ✅ Metrics Server operativo
+[2025-11-16T19:36:44Z] [DEBUG] Verificando namespace de test...
+[2025-11-16T19:36:44Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-16T19:36:44Z] [INFO] 🔐 CHECKPOINT: pre_scheduler_audit_done - Auditoría PRE-scheduler completada
+[2025-11-16T19:36:44Z] [INFO] === ENTORNO COMPLETO LISTO PARA TESTS ===
+[2025-11-16T19:36:44Z] [INFO] Iniciando despliegue del scheduler: watch
+[2025-11-16T19:36:44Z] [INFO] 🔐 CHECKPOINT: scheduler_deployment_start - Desplegando scheduler personalizado
+[2025-11-16T19:36:44Z] [INFO] Eliminando despliegue previo del scheduler si existe
+[2025-11-16T19:36:44Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true
+[2025-11-16T19:36:44Z] [DEBUG] Comando exitoso: Eliminar scheduler anterior
+[2025-11-16T19:36:44Z] [INFO] Aplicando configuración RBAC y Deployment del scheduler
+[2025-11-16T19:36:44Z] [DEBUG] Ejecutando: kubectl apply -f rbac-deploy.yaml
+[2025-11-16T19:36:44Z] [DEBUG] Comando exitoso: Aplicar RBAC del scheduler
+[2025-11-16T19:36:44Z] [INFO] Esperando a que el scheduler se despliegue correctamente (timeout: 120s)
+[2025-11-16T19:36:44Z] [DEBUG] Ejecutando: kubectl rollout status deployment/my-scheduler -n kube-system --timeout=120s
+[2025-11-16T19:36:45Z] [DEBUG] Comando exitoso: Esperar despliegue del scheduler
+[2025-11-16T19:36:45Z] [INFO] Scheduler desplegado exitosamente
+[2025-11-16T19:36:45Z] [INFO] 🔐 CHECKPOINT: scheduler_deployed - Scheduler personalizado desplegado exitosamente
+[2025-11-16T19:36:45Z] [DEBUG] 📝 Operación registrada: deploy_scheduler -> my-scheduler
+[2025-11-16T19:36:45Z] [INFO] 🔍 Realizando auditoría POST-scheduler...
+[2025-11-16T19:36:45Z] [INFO] 🔍 Iniciando auditoría del cluster (contexto: post_scheduler)
+[2025-11-16T19:36:45Z] [DEBUG] Verificando infraestructura básica...
+[2025-11-16T19:36:45Z] [DEBUG] Esperando a que todos los nodos estén Ready...
+[2025-11-16T19:36:45Z] [INFO] ✅ Todos los nodos están Ready (3/3)
+[2025-11-16T19:36:45Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=etcd --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-apiserver --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-controller-manager --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [DEBUG] Intento 1/3 → kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [INFO] Comando OK: kubectl get pods -n kube-system -l component=kube-scheduler --field-selector=status.phase=Running
+[2025-11-16T19:36:46Z] [DEBUG] Auditoría POST-scheduler - verificando despliegue...
+[2025-11-16T19:36:46Z] [DEBUG] Verificando despliegue del scheduler personalizado...
+[2025-11-16T19:36:47Z] [DEBUG] ✅ Scheduler ejecutándose en control-plane: sched-lab-control-plane
+[2025-11-16T19:36:47Z] [DEBUG] Verificando funcionalidad del scheduler...
+[2025-11-16T19:36:54Z] [DEBUG] ✅ Scheduler está programando pods correctamente
+[2025-11-16T19:36:54Z] [INFO] ✅ Auditoría completada - Estado: HEALTHY
+[2025-11-16T19:36:54Z] [INFO] 🔐 CHECKPOINT: setup_completed - Setup completo finalizado exitosamente - Listo para tests
+[2025-11-16T19:36:54Z] [SUCCESS] === SETUP COMPLETO FINALIZADO EXITOSAMENTE ===
+[2025-11-16T19:36:54Z] [INFO] 🚀 Iniciando ejecución de tests...
+[2025-11-16T19:36:54Z] [INFO] Parámetros para tests: Scheduler=watch, Pods=20, Concurrentes=10
+[2025-11-16T19:36:54Z] [DEBUG] Ejecutando: ./scheduler-test.sh watch 20 10
+[2025-11-16T19:36:54Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/benchmarking_1/log/benchmarking.log
+[2025-11-16T19:36:54Z] [DEBUG] Configurando manejo global de señales...
+[2025-11-16T19:36:54Z] [SUCCESS] === INICIO DE TESTS DE SCHEDULER ===
+[2025-11-16T19:36:54Z] [SUCCESS] Scheduler: watch, Total pods: 4, Máximo concurrente: 3
+[2025-11-16T19:36:54Z] [SUCCESS] Límites configurados para evitar sobrecarga:
+[2025-11-16T19:36:54Z] [SUCCESS]   - Máximo total de pods: 4
+[2025-11-16T19:36:54Z] [SUCCESS]   - Máximo pods en paralelo: 3
+[2025-11-16T19:36:54Z] [INFO] Inicializando test de scheduler: watch
+[2025-11-16T19:36:54Z] [INFO] Número total de pods: 4
+[2025-11-16T19:36:54Z] [INFO] Máximo pods concurrentes: 3
+[2025-11-16T19:36:54Z] [INFO] Namespace: test-scheduler
+[2025-11-16T19:36:54Z] [INFO] Límites configurados:
+[2025-11-16T19:36:54Z] [INFO]   - Máximo total de pods: 4
+[2025-11-16T19:36:54Z] [INFO]   - Máximo pods en paralelo: 3
+[2025-11-16T19:36:54Z] [DEBUG] Directorios creados para scheduler 'watch':
+[2025-11-16T19:36:54Z] [DEBUG]   - Base: ./watch
+[2025-11-16T19:36:54Z] [DEBUG]   - Métricas: ./watch/metrics
+[2025-11-16T19:36:54Z] [DEBUG]   - Temporal: ./watch/temp_20251116_203654
+[2025-11-16T19:36:54Z] [INFO] Limpiando namespace test-scheduler
+[2025-11-16T19:36:54Z] [DEBUG] Ejecutando: kubectl delete pods --all -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:36:55Z] [DEBUG] Comando exitoso: kubectl delete pods --all -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:36:57Z] [INFO] Ejecución paralela iniciada (máximo 3 pods)
+[2025-11-16T19:36:57Z] [INFO] Distribución de pods: 1 por tipo + 0 extras
+[2025-11-16T19:36:57Z] [DEBUG] Lanzado job 1/1 (PID: 1851851) para cpu-heavy-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando job para: cpu-heavy-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando medición para: cpu-heavy-pod-1, tipo: cpu-heavy
+[2025-11-16T19:36:57Z] [DEBUG] Lanzado job 2/2 (PID: 1851860) para ram-heavy-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando job para: ram-heavy-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Creando pod desde: ./cpu-heavy/cpu-heavy-pod.yaml
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando medición para: ram-heavy-pod-1, tipo: ram-heavy
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando job para: nginx-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Lanzado job 3/3 (PID: 1851874) para nginx-pod-1
+[2025-11-16T19:36:57Z] [DEBUG] Iniciando medición para: nginx-pod-1, tipo: nginx
+[2025-11-16T19:36:57Z] [DEBUG] Creando pod desde: ./ram-heavy/ram-heavy-pod.yaml
+[2025-11-16T19:36:57Z] [DEBUG] Creando pod desde: ./nginx/nginx-pod.yaml
+[2025-11-16T19:36:57Z] [INFO] Pod creado: test-nginx-pod-s7d8k
+[2025-11-16T19:36:57Z] [INFO] Pod creado: cpu-heavy-pod-sqxqh
+[2025-11-16T19:36:57Z] [DEBUG] Pod registrado: test-nginx-pod-s7d8k (total: 1)
+[2025-11-16T19:36:57Z] [DEBUG] Pod registrado: cpu-heavy-pod-sqxqh (total: 1)
+[2025-11-16T19:36:57Z] [DEBUG] Esperando a que pod test-nginx-pod-s7d8k esté Ready...
+[2025-11-16T19:36:57Z] [DEBUG] Esperando a que pod cpu-heavy-pod-sqxqh esté Ready...
+[2025-11-16T19:36:57Z] [INFO] Pod creado: ram-heavy-pod-ss48z
+[2025-11-16T19:36:57Z] [DEBUG] Pod registrado: ram-heavy-pod-ss48z (total: 1)
+[2025-11-16T19:36:57Z] [DEBUG] Esperando a que pod ram-heavy-pod-ss48z esté Ready...
+[2025-11-16T19:36:59Z] [DEBUG] Esperando pod cpu-heavy-pod-sqxqh... (2/120s)
+[2025-11-16T19:36:59Z] [DEBUG] Esperando pod ram-heavy-pod-ss48z... (2/120s)
+[2025-11-16T19:36:59Z] [DEBUG] Esperando pod test-nginx-pod-s7d8k... (2/120s)
+[2025-11-16T19:37:00Z] [INFO] Pod ram-heavy-pod-ss48z está Ready y operativo
+[2025-11-16T19:37:00Z] [INFO] Pod test-nginx-pod-s7d8k está Ready y operativo
+[2025-11-16T19:37:00Z] [INFO] Pod cpu-heavy-pod-sqxqh está Ready y operativo
+[2025-11-16T19:37:02Z] [DEBUG] Calculando pending_running_latency para pod: ram-heavy-pod-ss48z
+[2025-11-16T19:37:02Z] [DEBUG] Calculando pending_running_latency para pod: test-nginx-pod-s7d8k
+[2025-11-16T19:37:02Z] [DEBUG] Calculando pending_running_latency para pod: cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:03Z] [DEBUG] Pending_running_latency para ram-heavy-pod-ss48z: 0 segundos
+[2025-11-16T19:37:03Z] [DEBUG] Calculando pull_start_latency para pod: ram-heavy-pod-ss48z
+[2025-11-16T19:37:03Z] [DEBUG] Pending_running_latency para test-nginx-pod-s7d8k: 0 segundos
+[2025-11-16T19:37:03Z] [DEBUG] Calculando pull_start_latency para pod: test-nginx-pod-s7d8k
+[2025-11-16T19:37:03Z] [DEBUG] Pending_running_latency para cpu-heavy-pod-sqxqh: 0 segundos
+[2025-11-16T19:37:03Z] [DEBUG] Calculando pull_start_latency para pod: cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:03Z] [DEBUG] No se encontró evento Pulling para ram-heavy-pod-ss48z
+[2025-11-16T19:37:03Z] [DEBUG] Calculando uso promedio de recursos del scheduler
+[2025-11-16T19:37:03Z] [DEBUG] No se encontró evento Pulling para test-nginx-pod-s7d8k
+[2025-11-16T19:37:03Z] [DEBUG] Calculando uso promedio de recursos del scheduler
+[2025-11-16T19:37:03Z] [DEBUG] No se encontró evento Pulling para cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:03Z] [DEBUG] Calculando uso promedio de recursos del scheduler
+[2025-11-16T19:37:03Z] [DEBUG] Monitorizando pod del scheduler: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:03Z] [DEBUG] Monitorizando pod del scheduler: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:03Z] [DEBUG] Monitorizando pod del scheduler: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:03Z] [WARN] Intento 1: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:04Z] [WARN] Intento 1: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:04Z] [WARN] Intento 1: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:05Z] [WARN] Intento 2: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:05Z] [WARN] Intento 2: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:05Z] [WARN] Intento 2: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:06Z] [WARN] Intento 3: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:06Z] [WARN] Intento 3: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:06Z] [WARN] Intento 3: No se pudieron obtener métricas del pod my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:07Z] [WARN] No se pudieron obtener métricas del scheduler en ninguno de los 3 intentos
+[2025-11-16T19:37:07Z] [DEBUG] Calculando list_ops para pod: ram-heavy-pod-ss48z
+[2025-11-16T19:37:07Z] [WARN] No se pudieron obtener métricas del scheduler en ninguno de los 3 intentos
+[2025-11-16T19:37:07Z] [DEBUG] Calculando list_ops para pod: test-nginx-pod-s7d8k
+[2025-11-16T19:37:07Z] [WARN] No se pudieron obtener métricas del scheduler en ninguno de los 3 intentos
+[2025-11-16T19:37:07Z] [DEBUG] Calculando list_ops para pod: cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:08Z] [DEBUG] Calculando attempts y eventos para pod: ram-heavy-pod-ss48z
+[2025-11-16T19:37:08Z] [DEBUG] Calculando attempts y eventos para pod: test-nginx-pod-s7d8k
+[2025-11-16T19:37:08Z] [DEBUG] Calculando attempts y eventos para pod: cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:08Z] [DEBUG] Usando scheduler pod: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:08Z] [DEBUG] Usando scheduler pod: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:08Z] [DEBUG] Usando scheduler pod: my-scheduler-99d955d45-v229b
+[2025-11-16T19:37:08Z] [DEBUG] Métricas scheduler para ram-heavy-pod-ss48z: attempts=00, successful=1, retries=00, implicit_retries=0, events=1
+[2025-11-16T19:37:08Z] [DEBUG] Escribiendo métricas temporales en: ./watch/temp_20251116_203654/ram-heavy-pod-ss48z.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: jq -n --arg pod_name ram-heavy-pod-ss48z --arg pod_type ram-heavy --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Comando exitoso: jq -n --arg pod_name ram-heavy-pod-ss48z --arg pod_type ram-heavy --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Métricas JSON escritas exitosamente en ./watch/temp_20251116_203654/ram-heavy-pod-ss48z.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: kubectl delete pod ram-heavy-pod-ss48z -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:08Z] [DEBUG] Métricas scheduler para test-nginx-pod-s7d8k: attempts=00, successful=1, retries=00, implicit_retries=0, events=1
+[2025-11-16T19:37:08Z] [DEBUG] Escribiendo métricas temporales en: ./watch/temp_20251116_203654/test-nginx-pod-s7d8k.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: jq -n --arg pod_name test-nginx-pod-s7d8k --arg pod_type nginx --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Comando exitoso: jq -n --arg pod_name test-nginx-pod-s7d8k --arg pod_type nginx --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Métricas JSON escritas exitosamente en ./watch/temp_20251116_203654/test-nginx-pod-s7d8k.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: kubectl delete pod test-nginx-pod-s7d8k -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:08Z] [DEBUG] Métricas scheduler para cpu-heavy-pod-sqxqh: attempts=00, successful=1, retries=00, implicit_retries=0, events=1
+[2025-11-16T19:37:08Z] [DEBUG] Escribiendo métricas temporales en: ./watch/temp_20251116_203654/cpu-heavy-pod-sqxqh.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: jq -n --arg pod_name cpu-heavy-pod-sqxqh --arg pod_type cpu-heavy --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Comando exitoso: jq -n --arg pod_name cpu-heavy-pod-sqxqh --arg pod_type cpu-heavy --argjson latency 5 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 0 --argjson mem 0 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:37:08Z] [DEBUG] Métricas JSON escritas exitosamente en ./watch/temp_20251116_203654/cpu-heavy-pod-sqxqh.json
+[2025-11-16T19:37:08Z] [DEBUG] Ejecutando: kubectl delete pod cpu-heavy-pod-sqxqh -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:09Z] [DEBUG] Comando exitoso: kubectl delete pod ram-heavy-pod-ss48z -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:09Z] [INFO] Medición completada para: ram-heavy-pod-ss48z
+[2025-11-16T19:37:09Z] [DEBUG] Job completado exitosamente: ram-heavy-pod-1
+[2025-11-16T19:37:09Z] [DEBUG] Lanzado job 4/4 (PID: 1853558) para test-basic-pod-1
+[2025-11-16T19:37:09Z] [DEBUG] Iniciando job para: test-basic-pod-1
+[2025-11-16T19:37:09Z] [DEBUG] Iniciando medición para: test-basic-pod-1, tipo: test-basic
+[2025-11-16T19:37:09Z] [INFO] Esperando que terminen 4 jobs...
+[2025-11-16T19:37:09Z] [DEBUG] Creando pod desde: ./test-basic/test-basic-pod.yaml
+[2025-11-16T19:37:09Z] [DEBUG] Comando exitoso: kubectl delete pod test-nginx-pod-s7d8k -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:09Z] [INFO] Medición completada para: test-nginx-pod-s7d8k
+[2025-11-16T19:37:09Z] [DEBUG] Job completado exitosamente: nginx-pod-1
+[2025-11-16T19:37:09Z] [DEBUG] Comando exitoso: kubectl delete pod cpu-heavy-pod-sqxqh -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:37:09Z] [INFO] Medición completada para: cpu-heavy-pod-sqxqh
+[2025-11-16T19:37:09Z] [DEBUG] Job completado exitosamente: cpu-heavy-pod-1
+[2025-11-16T19:37:09Z] [DEBUG] Job 1851851 completado exitosamente
+[2025-11-16T19:37:09Z] [DEBUG] Job 1851860 completado exitosamente
+[2025-11-16T19:37:09Z] [DEBUG] Job 1851874 completado exitosamente
+[2025-11-16T19:37:09Z] [INFO] Pod creado: test-basic-cmgqj
+[2025-11-16T19:37:09Z] [DEBUG] Pod registrado: test-basic-cmgqj (total: 1)
+[2025-11-16T19:37:09Z] [DEBUG] Esperando a que pod test-basic-cmgqj esté Ready...
+[2025-11-16T19:37:11Z] [DEBUG] Esperando pod test-basic-cmgqj... (2/120s)
+[2025-11-16T19:37:14Z] [DEBUG] Esperando pod test-basic-cmgqj... (4/120s)
+[2025-11-16T19:37:16Z] [DEBUG] Esperando pod test-basic-cmgqj... (6/120s)
+[2025-11-16T19:37:17Z] [DEBUG] Esperando pod test-basic-cmgqj... (8/120s)
+[2025-11-16T19:37:19Z] [DEBUG] Esperando pod test-basic-cmgqj... (10/120s)
+[2025-11-16T19:37:22Z] [DEBUG] Esperando pod test-basic-cmgqj... (12/120s)
+[2025-11-16T19:37:24Z] [DEBUG] Esperando pod test-basic-cmgqj... (14/120s)
+[2025-11-16T19:37:26Z] [DEBUG] Esperando pod test-basic-cmgqj... (16/120s)
+[2025-11-16T19:37:28Z] [DEBUG] Esperando pod test-basic-cmgqj... (18/120s)
+[2025-11-16T19:37:31Z] [DEBUG] Esperando pod test-basic-cmgqj... (20/120s)
+[2025-11-16T19:37:33Z] [DEBUG] Esperando pod test-basic-cmgqj... (22/120s)
+[2025-11-16T19:37:35Z] [DEBUG] Esperando pod test-basic-cmgqj... (24/120s)
+[2025-11-16T19:37:37Z] [DEBUG] Esperando pod test-basic-cmgqj... (26/120s)
+[2025-11-16T19:37:40Z] [DEBUG] Esperando pod test-basic-cmgqj... (28/120s)
+[2025-11-16T19:37:42Z] [DEBUG] Esperando pod test-basic-cmgqj... (30/120s)
+[2025-11-16T19:37:44Z] [DEBUG] Esperando pod test-basic-cmgqj... (32/120s)
+[2025-11-16T19:37:46Z] [DEBUG] Esperando pod test-basic-cmgqj... (34/120s)
+[2025-11-16T19:37:48Z] [DEBUG] Esperando pod test-basic-cmgqj... (36/120s)
+[2025-11-16T19:37:50Z] [DEBUG] Esperando pod test-basic-cmgqj... (38/120s)
+[2025-11-16T19:37:52Z] [DEBUG] Esperando pod test-basic-cmgqj... (40/120s)
+[2025-11-16T19:37:54Z] [DEBUG] Esperando pod test-basic-cmgqj... (42/120s)
+[2025-11-16T19:37:57Z] [DEBUG] Esperando pod test-basic-cmgqj... (44/120s)
+[2025-11-16T19:37:59Z] [DEBUG] Esperando pod test-basic-cmgqj... (46/120s)
+[2025-11-16T19:38:01Z] [DEBUG] Esperando pod test-basic-cmgqj... (48/120s)
+[2025-11-16T19:38:03Z] [DEBUG] Esperando pod test-basic-cmgqj... (50/120s)
+[2025-11-16T19:38:06Z] [DEBUG] Esperando pod test-basic-cmgqj... (52/120s)
+[2025-11-16T19:38:08Z] [DEBUG] Esperando pod test-basic-cmgqj... (54/120s)
+[2025-11-16T19:38:10Z] [DEBUG] Esperando pod test-basic-cmgqj... (56/120s)
+[2025-11-16T19:38:13Z] [DEBUG] Esperando pod test-basic-cmgqj... (58/120s)
+[2025-11-16T19:38:15Z] [DEBUG] Esperando pod test-basic-cmgqj... (60/120s)
+[2025-11-16T19:38:17Z] [DEBUG] Esperando pod test-basic-cmgqj... (62/120s)
+[2025-11-16T19:38:19Z] [DEBUG] Esperando pod test-basic-cmgqj... (64/120s)
+[2025-11-16T19:38:21Z] [DEBUG] Esperando pod test-basic-cmgqj... (66/120s)
+[2025-11-16T19:38:23Z] [DEBUG] Esperando pod test-basic-cmgqj... (68/120s)
+[2025-11-16T19:38:25Z] [DEBUG] Esperando pod test-basic-cmgqj... (70/120s)
+[2025-11-16T19:38:27Z] [DEBUG] Esperando pod test-basic-cmgqj... (72/120s)
+[2025-11-16T19:38:30Z] [DEBUG] Esperando pod test-basic-cmgqj... (74/120s)
+[2025-11-16T19:38:32Z] [DEBUG] Esperando pod test-basic-cmgqj... (76/120s)
+[2025-11-16T19:38:34Z] [DEBUG] Esperando pod test-basic-cmgqj... (78/120s)
+[2025-11-16T19:38:36Z] [DEBUG] Esperando pod test-basic-cmgqj... (80/120s)
+[2025-11-16T19:38:39Z] [DEBUG] Esperando pod test-basic-cmgqj... (82/120s)
+[2025-11-16T19:38:41Z] [DEBUG] Esperando pod test-basic-cmgqj... (84/120s)
+[2025-11-16T19:38:43Z] [DEBUG] Esperando pod test-basic-cmgqj... (86/120s)
+[2025-11-16T19:38:45Z] [DEBUG] Esperando pod test-basic-cmgqj... (88/120s)
+[2025-11-16T19:38:48Z] [DEBUG] Esperando pod test-basic-cmgqj... (90/120s)
+[2025-11-16T19:38:50Z] [DEBUG] Esperando pod test-basic-cmgqj... (92/120s)
+[2025-11-16T19:38:51Z] [DEBUG] Esperando pod test-basic-cmgqj... (94/120s)
+[2025-11-16T19:38:54Z] [DEBUG] Esperando pod test-basic-cmgqj... (96/120s)
+[2025-11-16T19:38:56Z] [DEBUG] Esperando pod test-basic-cmgqj... (98/120s)
+[2025-11-16T19:38:58Z] [DEBUG] Esperando pod test-basic-cmgqj... (100/120s)
+[2025-11-16T19:39:00Z] [DEBUG] Esperando pod test-basic-cmgqj... (102/120s)
+[2025-11-16T19:39:03Z] [DEBUG] Esperando pod test-basic-cmgqj... (104/120s)
+[2025-11-16T19:39:05Z] [DEBUG] Esperando pod test-basic-cmgqj... (106/120s)
+[2025-11-16T19:39:07Z] [DEBUG] Esperando pod test-basic-cmgqj... (108/120s)
+[2025-11-16T19:39:09Z] [DEBUG] Esperando pod test-basic-cmgqj... (110/120s)
+[2025-11-16T19:39:11Z] [DEBUG] Esperando pod test-basic-cmgqj... (112/120s)
+[2025-11-16T19:39:14Z] [DEBUG] Esperando pod test-basic-cmgqj... (114/120s)
+[2025-11-16T19:39:16Z] [DEBUG] Esperando pod test-basic-cmgqj... (116/120s)
+[2025-11-16T19:39:18Z] [DEBUG] Esperando pod test-basic-cmgqj... (118/120s)
+[2025-11-16T19:39:20Z] [DEBUG] Esperando pod test-basic-cmgqj... (120/120s)
+[2025-11-16T19:39:20Z] [WARN] Timeout esperando por pod test-basic-cmgqj
+[2025-11-16T19:39:20Z] [WARN] Pod test-basic-cmgqj no alcanzó estado Ready
+[2025-11-16T19:39:22Z] [DEBUG] Calculando pending_running_latency para pod: test-basic-cmgqj
+[2025-11-16T19:39:22Z] [WARN] Pod test-basic-cmgqj no está en fase Running (fase: Pending)
+[2025-11-16T19:39:22Z] [DEBUG] Calculando pull_start_latency para pod: test-basic-cmgqj
+[2025-11-16T19:39:22Z] [DEBUG] No se encontró evento Pulling para test-basic-cmgqj
+[2025-11-16T19:39:22Z] [DEBUG] Calculando uso promedio de recursos del scheduler
+[2025-11-16T19:39:22Z] [DEBUG] Monitorizando pod del scheduler: my-scheduler-99d955d45-v229b
+[2025-11-16T19:39:23Z] [DEBUG] Muestra 1: CPU=2m, MEM=59Mi
+[2025-11-16T19:39:24Z] [DEBUG] Muestra 2: CPU=2m, MEM=59Mi
+[2025-11-16T19:39:25Z] [DEBUG] Muestra 3: CPU=2m, MEM=59Mi
+[2025-11-16T19:39:26Z] [DEBUG] Uso promedio del scheduler: CPU=2m, MEM=59Mi (de 3 muestras)
+[2025-11-16T19:39:26Z] [DEBUG] Calculando list_ops para pod: test-basic-cmgqj
+[2025-11-16T19:39:27Z] [DEBUG] Calculando attempts y eventos para pod: test-basic-cmgqj
+[2025-11-16T19:39:27Z] [DEBUG] Usando scheduler pod: my-scheduler-99d955d45-v229b
+[2025-11-16T19:39:27Z] [DEBUG] Métricas scheduler para test-basic-cmgqj: attempts=00, successful=1, retries=00, implicit_retries=0, events=1
+[2025-11-16T19:39:27Z] [DEBUG] Escribiendo métricas temporales en: ./watch/temp_20251116_203654/test-basic-cmgqj.json
+[2025-11-16T19:39:27Z] [DEBUG] Ejecutando: jq -n --arg pod_name test-basic-cmgqj --arg pod_type test-basic --argjson latency 133 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 2 --argjson mem 59 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:39:27Z] [DEBUG] Comando exitoso: jq -n --arg pod_name test-basic-cmgqj --arg pod_type test-basic --argjson latency 133 --argjson pending_latency 0 --argjson pull_latency 0 --argjson cpu 2 --argjson mem 59 --argjson list_ops 0 --argjson retries 00 --argjson implicit_retries 0 --argjson events 1 {
+            pod_name: $pod_name,
+            pod_type: $pod_type,
+            scheduling_latency_seconds: $latency,
+            latency_pending_running_seconds: $pending_latency,
+            pull_start_latency_seconds: $pull_latency,
+            scheduler_cpu_millicores: $cpu,
+            scheduler_memory_mib: $mem,
+            list_ops: $list_ops,
+            retries: $retries,
+            implicit_retries: $implicit_retries,
+            events: $events,
+            timestamp: now | todate
+        }
+[2025-11-16T19:39:27Z] [DEBUG] Métricas JSON escritas exitosamente en ./watch/temp_20251116_203654/test-basic-cmgqj.json
+[2025-11-16T19:39:27Z] [DEBUG] Ejecutando: kubectl delete pod test-basic-cmgqj -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:27Z] [DEBUG] Comando exitoso: kubectl delete pod test-basic-cmgqj -n test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:27Z] [INFO] Medición completada para: test-basic-cmgqj
+[2025-11-16T19:39:27Z] [DEBUG] Job completado exitosamente: test-basic-pod-1
+[2025-11-16T19:39:27Z] [DEBUG] Job 1853558 completado exitosamente
+[2025-11-16T19:39:27Z] [INFO] Todos los pods procesados exitosamente
+[2025-11-16T19:39:27Z] [SUCCESS] Tests completados exitosamente
+[2025-11-16T19:39:27Z] [INFO] Generando resumen global de métricas...
+[2025-11-16T19:39:27Z] [DEBUG] Encontrados 4 archivos temporales para consolidar
+[2025-11-16T19:39:27Z] [ERROR] Error al generar el JSON final ./watch/metrics/scheduler_metrics_20251116_203654.json
+[2025-11-16T19:39:27Z] [ERROR] Error en la consolidación de métricas
+[2025-11-16T19:39:27Z] [ERROR] ❌ ERROR en línea 1056: 'return 1' (code: 1)
+[2025-11-16T19:39:27Z] [ERROR] Checkpoint actual: 
+[2025-11-16T19:39:27Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-16T19:39:27Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T19:39:27Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T19:39:27Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-16T19:39:27Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T19:39:27Z] [INFO] Deteniendo 4 procesos en background...
+[2025-11-16T19:39:29Z] [INFO] Todos los procesos background detenidos
+[2025-11-16T19:39:29Z] [INFO] 🧹 Limpieza completa del cluster...
+[2025-11-16T19:39:29Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Ejecutando: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Comando exitoso: kubectl delete --all deployments --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Ejecutando: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Comando exitoso: kubectl delete deployment my-scheduler -n kube-system --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Ejecutando: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Comando exitoso: kubectl delete -f rbac-deploy.yaml --ignore-not-found=true --wait=false
+[2025-11-16T19:39:30Z] [DEBUG] Ejecutando: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T19:39:31Z] [DEBUG] Comando exitoso: kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.3/components.yaml --ignore-not-found=true
+[2025-11-16T19:39:36Z] [INFO] ✅ Limpieza del cluster completada
+[2025-11-16T19:39:36Z] [INFO] ✅ Limpieza general completada
+[2025-11-16T19:39:36Z] [INFO] Rollback completado al checkpoint: 
+[2025-11-16T19:39:36Z] [DEBUG] Ejecutando limpieza completa de recursos
+[2025-11-16T19:39:36Z] [DEBUG] Ejecutando: rm -rf ./watch/temp_20251116_203654
+[2025-11-16T19:39:36Z] [DEBUG] Comando exitoso: rm -rf ./watch/temp_20251116_203654
+[2025-11-16T19:39:36Z] [DEBUG] Directorio temporal eliminado: ./watch/temp_20251116_203654
+[2025-11-16T19:39:36Z] [DEBUG] Limpieza final de recursos de Kubernetes
+[2025-11-16T19:39:36Z] [DEBUG] Ejecutando: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:36Z] [DEBUG] Comando exitoso: kubectl delete --all pods --namespace test-scheduler --ignore-not-found=true --wait=false
+[2025-11-16T19:39:36Z] [WARN] Comando falló (1): ./scheduler-test.sh watch 20 10
+[2025-11-16T19:39:36Z] [ERROR] Tests fallaron con código: 1
+[2025-11-16T19:39:36Z] [ERROR] ❌ ERROR en línea 524: 'return $test_exit_code' (code: 1)
+[2025-11-16T19:39:36Z] [ERROR] Checkpoint actual: setup_completed
+[2025-11-16T19:39:36Z] [INFO] 🔄 Iniciando rollback al checkpoint: setup_completed
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T19:39:36Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-16T19:39:36Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - deploy_scheduler: my-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - install_metrics_server: metrics-server
+[2025-11-16T19:39:36Z] [DEBUG]   - load_image_scheduler: my-py-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - load_image_cpu: test-basic
+[2025-11-16T19:39:36Z] [WARN] Checkpoint desconocido: setup_completed, limpieza general
+[2025-11-16T19:39:36Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T19:39:36Z] [ERROR] Script terminado con error: 1
+[2025-11-16T19:39:36Z] [INFO] 🔄 Iniciando rollback al checkpoint: setup_completed
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T19:39:36Z] [DEBUG]   - create_cluster: kind-cluster
+[2025-11-16T19:39:36Z] [DEBUG]   - create_namespace: test-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - deploy_scheduler: my-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - install_metrics_server: metrics-server
+[2025-11-16T19:39:36Z] [DEBUG]   - load_image_scheduler: my-py-scheduler
+[2025-11-16T19:39:36Z] [DEBUG]   - load_image_cpu: test-basic
+[2025-11-16T19:39:36Z] [WARN] Checkpoint desconocido: setup_completed, limpieza general
+[2025-11-16T19:39:36Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T19:39:36Z] [WARN] Comando falló (1): ./benchmarking_setup.sh watch 20
+[2025-11-16T19:39:36Z] [ERROR] Benchmarking falló con código: 1
+[2025-11-16T19:39:36Z] [ERROR] Script terminado con error: 1
+[2025-11-16T19:39:36Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T19:39:36Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T19:39:36Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-16T19:39:36Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T19:39:37Z] [ERROR] ❌ ERROR en línea 573: 'exit $exit_code' (code: 1)
+[2025-11-16T19:39:37Z] [ERROR] Checkpoint actual: 
+[2025-11-16T19:39:37Z] [INFO] 🔄 Iniciando rollback al checkpoint: 
+[2025-11-16T19:39:37Z] [DEBUG] Operaciones realizadas hasta el checkpoint:
+[2025-11-16T19:39:37Z] [DEBUG] Operaciones realizadas:
+[2025-11-16T19:39:37Z] [WARN] Checkpoint desconocido: , limpieza general
+[2025-11-16T19:39:37Z] [INFO] 🚮 Ejecutando limpieza general...
+[2025-11-16T19:44:36Z] [DEBUG] 🔧 Logger inicializado - Log: /home/jogugil/kubernetes_ejemplos/repositorio/jogugil-py-scheduler-repo.o/benchmarking/benchmarking_1/log/benchmarking.log
+[2025-11-16T19:44:36Z] [DEBUG] Configurando manejo global de señales...

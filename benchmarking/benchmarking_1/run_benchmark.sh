@@ -20,24 +20,51 @@ log "INFO" "================== INICIO DE EJECUCIÓN =================="
 log "INFO" "Fecha: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 # ========================================
-# PARÁMETROS
+# PARÁMETROS Y OPCIONES
 # ========================================
 
 log "INFO" "Parámetros recibidos: $*"
 
-if [[ $# -eq 0 ]]; then
-    log "WARN" "No se pasaron parámetros, usando valores por defecto: watch 20"
-    SCHED_IMPL="watch"
-    NUM_PODS="20"
-elif [[ $# -eq 1 ]]; then
-    SCHED_IMPL="$1"
-    NUM_PODS="20"
-    log "INFO" "Usando scheduler: $SCHED_IMPL, pods por defecto: $NUM_PODS"
-else
-    SCHED_IMPL="$1"
-    NUM_PODS="$2"
-    log "INFO" "Usando scheduler: $SCHED_IMPL, pods: $NUM_PODS"
+# Variables por defecto
+SCHED_IMPL="watch"
+NUM_PODS="20"
+VERBOSE=false
+
+# Parsear opciones
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--verbose)
+            VERBOSE=true
+            export LOG_LEVEL=4  # Nivel DEBUG máximo
+            log "INFO" "🔍 MODO VERBOSO ACTIVADO - Mostrando DEBUG, auditorías y checkpoints"
+            shift
+            ;;
+        watch|polling)
+            SCHED_IMPL="$1"
+            shift
+            ;;
+        [0-9]*)
+            NUM_PODS="$1"
+            shift
+            ;;
+        *)
+            log "WARN" "Parámetro desconocido: $1"
+            shift
+            ;;
+    esac
+done
+
+# Si no verbose, establecer nivel normal (solo INFO y SUPERIOR)
+if [ "$VERBOSE" = false ]; then
+    export LOG_LEVEL=3  # Solo INFO, WARN, ERROR, SUCCESS
 fi
+
+# Si no se pasaron parámetros específicos
+if [[ $SCHED_IMPL == "watch" && $NUM_PODS == "20" && $VERBOSE == false ]]; then
+    log "INFO" "No se pasaron parámetros, usando valores por defecto: watch 20 (modo normal)"
+fi
+
+log "INFO" "Configuración final - Scheduler: $SCHED_IMPL, Pods: $NUM_PODS, Verbose: $VERBOSE"
 
 # Validar valores
 if [[ "$SCHED_IMPL" != "watch" && "$SCHED_IMPL" != "polling" ]]; then
@@ -65,8 +92,27 @@ echo "========================================"
 echo "   BENCHMARKING - SCHEDULER"
 echo "   Tipo: $SCHED_IMPL"
 echo "   Pods: $NUM_PODS"
+echo "   Verbose: $VERBOSE"
 echo "========================================"
 echo -e "${NC}"
+
+# Mostrar ayuda de verbose si está activado
+if [ "$VERBOSE" = true ]; then
+    echo -e "${BLUE}"
+    echo "🔍 MODO VERBOSO ACTIVADO:"
+    echo "   - Se muestran mensajes DEBUG"
+    echo "   - Se muestran auditorías completas" 
+    echo "   - Se muestran todos los checkpoints"
+    echo "   - Log level: DEBUG (4)"
+    echo -e "${NC}"
+else
+    echo -e "${GREEN}"
+    echo "📝 MODO NORMAL:"
+    echo "   - Solo mensajes INFO y SUPERIOR"
+    echo "   - Auditorías y checkpoints ocultos"
+    echo "   - Log level: INFO (3)"
+    echo -e "${NC}"
+fi
 
 # ========================================
 # MANEJO DE SEÑALES
@@ -84,11 +130,22 @@ trap propagate_signal SIGINT SIGTERM
 # ========================================
 
 log "INFO" "🚀 Iniciando benchmarking setup..."
-log "INFO" "Ejecutando: ./benchmarking_setup.sh $SCHED_IMPL $NUM_PODS"
+
+if [ "$VERBOSE" = true ]; then
+    log "DEBUG" "Ejecutando: ./benchmarking_setup.sh $SCHED_IMPL $NUM_PODS"
+    log "DEBUG" "=== INFORMACIÓN DE EJECUCIÓN VERBOSA ==="
+    log "DEBUG" "Directorio actual: $(pwd)"
+    log "DEBUG" "Usuario: $(whoami)"
+    log "DEBUG" "Log file: $LOG_FILE"
+    log "DEBUG" "Checkpoint file: $CHECKPOINT_FILE"
+fi
 
 if safe_run ./benchmarking_setup.sh "$SCHED_IMPL" "$NUM_PODS"; then
     log "SUCCESS" "Benchmarking completado exitosamente"
     echo -e "${GREEN}📄 Log completo en: $LOG_FILE${NC}"
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${BLUE}🔍 Checkpoints detallados en: $CHECKPOINT_FILE${NC}"
+    fi
 else
     exit_code=$?
     log "ERROR" "Benchmarking falló con código: $exit_code"

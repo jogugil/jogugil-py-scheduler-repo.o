@@ -3,9 +3,12 @@ kind: Pod
 metadata:
   name: test-nginx-pod
   namespace: test-scheduler
+  labels:
+    app: nginx-app
+    env: prod
 spec:
+  schedulerName: my-scheduler
+  restartPolicy: Never
   containers:
   - name: nginx
     image: nginx
-  schedulerName: my-scheduler
-  restartPolicy: Never

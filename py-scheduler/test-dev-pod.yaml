@@ -1,14 +1,15 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  generateName: ram-heavy-pod-
+  name: test-dev-pod
   namespace: test-scheduler
   labels:
-    app: ram-heavy
+    app: dev-app
+    env: dev
 spec:
   schedulerName: my-scheduler
   restartPolicy: Never
   containers:
-  - name: ram-heavy
-    image: ram-heavy:latest
-    imagePullPolicy: Never
+  - name: busybox
+    image: busybox
+    command: ["sleep", "3600"]

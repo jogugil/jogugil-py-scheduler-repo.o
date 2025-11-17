@@ -3,6 +3,9 @@ kind: Pod
 metadata:
   name: test-pod
   namespace: test-scheduler
+  labels:
+    app: pause-app
+    env: prod
 spec:
   schedulerName: my-scheduler
   containers:

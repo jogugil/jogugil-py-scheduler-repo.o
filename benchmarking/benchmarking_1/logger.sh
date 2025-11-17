@@ -73,9 +73,13 @@ checkpoint() {
     CURRENT_CHECKPOINT="$name"
 
     echo "[$timestamp] CHECKPOINT: $name - $message" >> "$CHECKPOINT_FILE"
-    log "INFO" "🔐 CHECKPOINT: $name - $message"
-}
 
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "INFO" "🔐 CHECKPOINT: $name - $message"
+    else
+        echo "[$timestamp] [CHECKPOINT] 🔐 $name - $message" >> "$LOG_FILE"
+    fi
+}
 rollback_to_checkpoint() {
     local target_checkpoint="$1"
     log "INFO" "🔄 Iniciando rollback al checkpoint: $target_checkpoint"
@@ -214,25 +218,27 @@ retry_command() {
     done
 }
 
-# Auditoría inteligente basada en contexto
 audit_cluster_health() {
     local context="${1:-full}"
-    log "INFO" "🔍 Iniciando auditoría del cluster (contexto: $context)"
+
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "INFO" "🔍 Iniciando auditoría del cluster (contexto: $context)"
+    else
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [AUDIT] 🔍 Iniciando auditoría ($context)" >> "$LOG_FILE"
+    fi
 
     local audit_passed=true
 
-   # Siempre verificar nodos y control plane básico
     if ! audit_basic_infrastructure; then
         log "ERROR" "Infraestructura básica no saludable"
         return 1
     fi
 
-    # Verificar según el contexto y operaciones realizadas
     case "$context" in
         "pre_scheduler")
             audit_pre_scheduler
             ;;
-        "post_scheduler") 
+        "post_scheduler")
             audit_post_scheduler
             ;;
         "post_tests")
@@ -242,30 +248,40 @@ audit_cluster_health() {
             audit_full_cluster
             ;;
         *)
-            log "WARN" "Contexto de auditoría desconocido: $context, usando full"
+            if [[ $LOG_LEVEL -ge 4 ]]; then
+                log "WARN" "Contexto de auditoría desconocido: $context, usando full"
+            fi
             audit_full_cluster
             ;;
     esac
-    
+
     if [ "$audit_passed" = true ]; then
-        log "INFO" "✅ Auditoría completada - Estado: HEALTHY"
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "INFO" "✅ Auditoría completada - Estado: HEALTHY"
+        else
+            echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [AUDIT] ✅ Completada - HEALTHY" >> "$LOG_FILE"
+        fi
         return 0
     else
-        log "ERROR" "❌ Auditoría completada - Estado: UNHEALTHY"
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "ERROR" "❌ Auditoría completada - Estado: UNHEALTHY"
+        else
+            echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [AUDIT] ❌ Completada - UNHEALTHY" >> "$LOG_FILE"
+        fi
         return 1
     fi
 }
 
 audit_basic_infrastructure() {
-    log "DEBUG" "Verificando infraestructura básica..."
-    
-    # 1. Verificar nodos
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "DEBUG" "Verificando infraestructura básica..."
+    fi
+
     if ! wait_for_nodes_ready; then
         log "ERROR" "Nodos no Ready"
         return 1
     fi
 
-    # 2. Verificar componentes del control plane
     local components=("etcd" "kube-apiserver" "kube-controller-manager" "kube-scheduler")
     for component in "${components[@]}"; do
         if ! retry_command "kubectl get pods -n kube-system -l component=$component --field-selector=status.phase=Running" 3 5; then
@@ -273,64 +289,72 @@ audit_basic_infrastructure() {
             return 1
         fi
     done
-    
+
     return 0
 }
 
 audit_pre_scheduler() {
-    log "DEBUG" "Auditoría PRE-scheduler - verificando prerequisitos..."
-    
-    # Verificar que las imágenes estén cargadas (si se registró la operación)
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "DEBUG" "Auditoría PRE-scheduler - verificando prerequisitos..."
+    fi
+
     if is_operation_done "load_image_scheduler"; then
-        log "DEBUG" "Verificando imagen my-py-scheduler..."
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "DEBUG" "Verificando imagen my-py-scheduler..."
+        fi
         if ! verify_scheduler_image_loaded; then
             log "WARN" "Imagen del scheduler no encontrada en nodos"
         fi
     fi
-    
+
     if is_operation_done "load_image_cpu"; then
-        log "DEBUG" "Verificando imagenes propias para el test ..."
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "DEBUG" "Verificando imagenes propias para el test ..."
+        fi
         if ! verify_test_images_loaded; then
             log "WARN" "Algunas imágenes de test no encontradas"
         fi
     fi
-    
-    # Verificar metrics-server si se instaló
+
     if is_operation_done "install_metrics_server"; then
-        log "DEBUG" "Verificando metrics-server..."
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "DEBUG" "Verificando metrics-server..."
+        fi
         if ! verify_metrics_server; then
             log "WARN" "Metrics-server no está operativo"
         fi
     fi
-    
-    # Verificar namespace de test
+
     if is_operation_done "create_namespace"; then
-        log "DEBUG" "Verificando namespace de test..."
+        if [[ $LOG_LEVEL -ge 4 ]]; then
+            log "DEBUG" "Verificando namespace de test..."
+        fi
         if ! verify_test_namespace; then
             log "ERROR" "Namespace de test no existe"
             return 1
         fi
     fi
-    
+
     return 0
 }
 
 audit_post_scheduler() {
-    log "DEBUG" "Auditoría POST-scheduler - verificando despliegue..."
-    
-    # Verificar que el scheduler esté desplegado y funcionando
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "DEBUG" "Auditoría POST-scheduler - verificando despliegue..."
+    fi
+
     if ! verify_scheduler_deployment; then
         log "ERROR" "Scheduler personalizado no está operativo"
         return 1
     fi
-    
-    # Verificar que el scheduler esté programando pods
+
     if ! verify_scheduler_functionality; then
         log "WARN" "Scheduler no está programando pods correctamente"
     fi
-    
+
     return 0
 }
+
 
 audit_post_tests() {
     log "DEBUG" "Auditoría POST-tests - verificando resultados..."
@@ -363,22 +387,26 @@ audit_full_cluster() {
 # ========================================
 
 verify_scheduler_image_loaded() {
-    log "DEBUG" "Verificando imagen del scheduler SOLO en control-plane..."
+    if [[ $LOG_LEVEL -ge 4 ]]; then
+        log "DEBUG" "Verificando imagen del scheduler SOLO en control-plane..."
+    fi
     local image_exists=true
 
-    # Solo verificar en control-plane
     for node in $(kind get nodes --name sched-lab | grep control-plane); do
         if docker exec "$node" crictl images | grep -q "my-py-scheduler"; then
-            log "DEBUG" "✅ Imagen my-py-scheduler encontrada en $node"
+            if [[ $LOG_LEVEL -ge 4 ]]; then
+                log "DEBUG" "✅ Imagen my-py-scheduler encontrada en $node"
+            fi
         else
-            log "DEBUG" "❌ Imagen my-py-scheduler NO encontrada en $node"
+            if [[ $LOG_LEVEL -ge 4 ]]; then
+                log "DEBUG" "❌ Imagen my-py-scheduler NO encontrada en $node"
+            fi
             image_exists=false
         fi
     done
 
     $image_exists
 }
-
 verify_test_images_loaded() {
     log "DEBUG" "Verificando imágenes de test en workers (método simple)..."
 

@@ -31,11 +31,12 @@ RAM_IMAGE="ram-heavy:latest"
 NGINX_IMAGE="nginx:latest"
 BASIC_IMAGE="pause:3.9"
 
-# Rutas relativas
-POLLING_PATH="../variants/polling/scheduler.py"
-WATCH_PATH="../variants/watch-skeleton/scheduler.py"
-DOCKERFILE_PATH="../Dockerfile"
-RBAC_PATH="../rbac-deploy.yaml"
+#
+# Rutas relativas  ---123-- Cuidado porque si se cambia de directorio esto no sirve
+POLLING_PATH="../../variants/polling/scheduler.py"
+WATCH_PATH="../../variants/watch-skeleton/scheduler.py"
+DOCKERFILE_PATH="../../Dockerfile"
+RBAC_PATH="../../rbac-deploy.yaml"
 
 # Parámetros Debug y Métricas
 RESULTS_FILE="scheduler_metrics_$(date +%Y%m%d_%H%M%S).csv"
@@ -379,7 +380,7 @@ deploy_scheduler() {
 # ========================
 
 main() {
-    log "INFO" "=== INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ==="
+    log "SUCCESS" "=== INICIO SETUP COMPLETO DEL ENTORNO DE BENCHMARKING ==="
     checkpoint "setup_start" "Iniciando setup completo del entorno"
 
     # Limpiar imágenes locales y contenedores detenidos
@@ -393,11 +394,11 @@ main() {
         return 1
     fi
 
-    # Copiar Dockerfile y requirements al directorio actual
+    # Copiar Dockerfile y requirements al directorio actual ---123-- Si se cambia de directorio esto no sirve (OJO!!!),. HAyq ue ve raahsta que punto sirve esto.
     log "INFO" "Copiando archivos de configuración al directorio actual"
-    if ! safe_run "Copiar Dockerfile" cp ../Dockerfile ./Dockerfile || \
-       ! safe_run "Copiar requirements" cp ../requirements.txt ./requirements.txt || \
-       ! safe_run "Copiar RBAC" cp ../rbac-deploy.yaml ./rbac-deploy.yaml; then
+    if ! safe_run "Copiar Dockerfile" cp ../../Dockerfile ./Dockerfile || \
+       ! safe_run "Copiar requirements" cp ../../requirements.txt ./requirements.txt || \
+       ! safe_run "Copiar RBAC" cp ../../rbac-deploy.yaml ./rbac-deploy.yaml; then
         log "ERROR" "Fallo al copiar archivos de configuración"
         return 1
     fi
@@ -480,11 +481,12 @@ main() {
 
     log "INFO" "=== ENTORNO COMPLETO LISTO PARA TESTS ==="
 
-    # Desplegamos el scheduler custom (watch o polling)
+    # DESPLEGAMOS SCHEDULER CUSTOM (watch o polling)
     if ! deploy_scheduler "$SCHED_IMPL"; then
         log "ERROR" "Fallo en el despliegue del scheduler"
         return 1
     fi
+    log "SUCCESS" "🔍 Desplegando my-scheduler..."
     # ✅ REGISTRAR OPERACIÓN: Scheduler desplegado
     register_operation "deploy_scheduler" "my-scheduler"
 
@@ -497,26 +499,26 @@ main() {
 
     checkpoint "setup_completed" "Setup completo finalizado exitosamente - Listo para tests"
     log "SUCCESS" "=== SETUP COMPLETO FINALIZADO EXITOSAMENTE ==="
-    
+
     # ✅ EJECUTAR TESTS DESPUÉS DEL SETUP
     log "INFO" "🚀 Iniciando ejecución de tests..."
-    
+
     # Calcular máximo de pods concurrentes (50% del total o mínimo 5)
     local max_concurrent=$(( NUM_PODS / 2 ))
     if [[ $max_concurrent -lt 5 ]]; then
         max_concurrent=5
     fi
-    
+
     log "INFO" "Parámetros para tests: Scheduler=$SCHED_IMPL, Pods=$NUM_PODS, Concurrentes=$max_concurrent"
-    
-    if safe_run ./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS" "$max_concurrent"; then
-        log "SUCCESS" "=== TESTS COMPLETADOS EXITOSAMENTE ==="
-        return 0
-    else
-        local test_exit_code=$?
-        log "ERROR" "Tests fallaron con código: $test_exit_code"
-        return $test_exit_code
-    fi
+
+#    if safe_run ./scheduler-test.sh "$SCHED_IMPL" "$NUM_PODS" "$max_concurrent"; then
+#        log "SUCCESS" "=== TESTS COMPLETADOS EXITOSAMENTE ==="
+#        return 0
+#    else
+#        local test_exit_code=$?
+#        log "ERROR" "Tests fallaron con código: $test_exit_code"
+#        return $test_exit_code
+#    fi
 }
 
 # Ejecutar función principal

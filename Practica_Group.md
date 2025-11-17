@@ -1517,7 +1517,170 @@ spec:
   - name: pause
     image: registry.k8s.io/pause:3.9
 ```
-Por ejemplo, en la implementación de los **benchmarking** hemos usado ***labels:{app: my-app}*** para simplificar
+
+Además, hemo modificado el código principal para que no se quede los **Pods** que **no tienen** el **label prod^^ a **Pending**.
+Lo que hicimos es que se eliminen del sistema:
+```Python
+    w = watch.Watch()
+    while running:
+        try:
+            for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
+                if not running:
+                    break
+                pod = event['object']
+                if not pod or not hasattr(pod, 'spec'):
+                    continue
+                if event['type'] not in ("ADDED", "MODIFIED"):
+                    continue
+                # Detectar pod pendiente con scheduler custom
+                if (pod.status.phase == "Pending" and
+                      pod.spec.scheduler_name == args.scheduler_name and
+                                   not pod.spec.node_name):
+
+                    record_trace(pod, "ADDED")
+
+                    try:
+                        # Intentar elegir nodo compatible
+                        node = choose_node(api, pod)
+                        if bind_pod(api, pod, node):
+                            record_trace(pod, "BOUND")
+                            print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+                        else:
+                            print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo programar")
+                    except RuntimeError as e:
+                        # No hay nodos compatibles → reasignar scheduler default
+                        print(f"[warn] No hay nodos compatibles para {pod.metadata.name}, reasignando scheduler default")
+                        body = {"spec": {"schedulerName": None}}
+                        try:
+                            api.patch_namespaced_pod(pod.metadata.name, pod.metadata.namespace, body)
+                            print(f"[info] Pod {pod.metadata.name} reasignado al scheduler default")
+                        except client.rest.ApiException as patch_e:
+                            print(f"[error] No se pudo reasignar scheduler de {pod.metadata.name}: {patch_e}")
+        except Exception as e:
+            print(f"[error] Error al programar {pod.metadata.name}: {e}")
+```
+ 
+Además de modificar lso manifiestos de **test-basic.yaml** y **test-nginx-pod.yaml** añadiendoles el label **prod**
+
+```yaml
+  labels:
+    app: pause-app
+    env: prod
+```
+
+```yaml
+  labels:
+    app: nginx-app
+    env: prod
+```
+Hemos creado otro **Pod** que no tenga ese label (**test-dev-pod.yaml**) y pueda verse que no se llega a Running sino que se elimina del 
+clúster.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-dev-pod
+  namespace: test-scheduler
+  labels:
+    app: dev-app
+    env: dev
+spec:
+  schedulerName: my-scheduler
+  restartPolicy: Never
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", "3600"]
+```
+
+Los pasos utilizados para comprobar eñ código del scheduler personaliozado son:
+
+1. Borrar imágenes anteriores
+
+```Bash
+# Borrar la imagen local
+docker rmi my-py-scheduler:latest
+
+# Borrar la imagen en nodos del cluster Kind
+docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
+docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
+```
+2. Construir la nueva imagen del scheduler
+
+```Bash
+docker build --no-cache -t my-py-scheduler:latest .
+```
+3. Cargar la imagen en Kind
+
+```Bash
+kind load docker-image my-py-scheduler:latest --name sched-lab
+```
+4. Borrar despliegues y pods antiguos
+
+```Bash
+kubectl delete deployment my-scheduler -n kube-system
+kubectl delete pod test-pod -n test-scheduler
+kubectl delete pod test-nginx-pod -n test-scheduler
+kubectl delete pod test-dev-pod -n test-scheduler
+kubectl delete namespace test-scheduler
+```
+5. Crear namespace para pruebas
+
+```Bash
+kubectl create namespace test-scheduler
+```
+6. Etiquetar nodos con env=prod (para filtrar pods prod)
+
+```Bash
+kubectl label node sched-lab-control-plane env=prod
+kubectl label node sched-lab-worker env=prod
+```
+7. Desplegar el scheduler custom
+
+```Bash
+kubectl apply -f rbac-deploy.yaml
+```
+Verificar que el deployment está corriendo:
+
+```Bash
+kubectl get deployment -n kube-system
+kubectl get pods -n kube-system
+```
+8. Aplicar pods de prueba
+
+```Bash
+kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
+kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
+kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
+```
+9. Ver estado de los pods
+
+```Bash
+kubectl get pods -n test-scheduler -o wide
+```
+
+Interpretación esperada:
+
+test-pod y test-nginx-pod → Running en nodo con env=prod
+
+test-dev-pod → No programado por scheduler custom; reasignado al scheduler default y luego Running.
+
+10. Revisar eventos del namespace
+```Bash 
+kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
+```
+
+Se ven los eventos de (imagen --123--) :
+
+Added / Scheduled / Bound (pods programados por scheduler custom)
+
+Warning + reasignación (pods dev que no tenían nodos compatibles)
+
+
+--123--
+
+Otro ejemplo que hemos usado es en la implementación de los **benchmarking** hemos usado ***labels:{app: my-app}*** para simplificar
 el nombnre del scheduler personaizado en los comandos kubernetes. Esto nos permite:
 
 - Identificar fácilmente los recursos de nuestro scheduler personalizado sin depender de nombres específicos
@@ -1526,11 +1689,7 @@ el nombnre del scheduler personaizado en los comandos kubernetes. Esto nos permi
 
 - Hacer nuestro código más mantenible y robusto frente a recreaciones de pods
 
-Por ejemplo, en la implementación de los benchmarking hemos usado app=my-scheduler para simplificar la identificación 
-del scheduler personalizado en los comandos kubernetes, evitando así tener que hardcodear nombres de pods específicos
- que pueden cambiar entre despliegues.
 
-En los comandos kubectl usamos labels para identificar nuestro scheduler:
 
 ```bash
 # En show_scheduler_logs():

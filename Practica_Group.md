@@ -1647,6 +1647,9 @@ Verificar que el deployment está corriendo:
 kubectl get deployment -n kube-system
 kubectl get pods -n kube-system
 ```
+<img width="1119" height="195" alt="image" src="https://github.com/user-attachments/assets/7c27ec24-dfb3-4901-b3b4-f82d8d5be055" />
+Vemos que **my-scheduler** está en **running**.
+
 8. Aplicar pods de prueba
 
 ```Bash

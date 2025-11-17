@@ -192,7 +192,7 @@ containers:
   args: ["--scheduler-name","my-scheduler"]
 ```
 
-Podenmos poner:
+Podemos poner:
 
 - `imagePullPolicy: Never`: Para desarrollo local con Kind; asegura que Kubernetes solo usa la imagen local.
 

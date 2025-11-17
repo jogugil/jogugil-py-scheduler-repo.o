@@ -1467,113 +1467,22 @@ Para poder hacer una comparación más exhaustiva **se han creado unos scripts p
 ## 🧩 Step 8 — Policy Extensions
 
 1. Label-based node filtering
-```Bash
-nodes = [n for n in api.list_node().items
-if "env" in (n.metadata.labels or {}) and
-n.metadata.labels["env"] == "prod"]
-```
 
-***Resolución:***
-Actualmente elegimos el nodo con menos Pods. Podemos mejorar considerando el tipo de Pod o label de aplicación:
-```python
-def choose_node(api, pod):
-    nodes = [n for n in api.list_node().items
-             if n.metadata.labels and n.metadata.labels.get("env") == "prod"
-             and is_node_compatible(n, pod)]
+Para garantizar que solo se ejecuten `pods` **prod** y que los `pods` **dev** o cualquier otro env se rechacen, usamos labels en los pods y no en los nodos:
 
-    if not nodes:
-        raise RuntimeError("No hay nodos disponibles compatibles")
-
-    pods = api.list_pod_for_all_namespaces().items
-    node_load = {n.metadata.name: 0 for n in nodes}
-
-    # Contar solo Pods del mismo tipo/app para distribuirlos
-    pod_app_label = pod.metadata.labels.get("app") if pod.metadata.labels else None
-    for p in pods:
-        if p.spec.node_name in node_load:
-            if not pod_app_label or (p.metadata.labels and p.metadata.labels.get("app") == pod_app_label):
-                node_load[p.spec.node_name] += 1
-
-    node = min(node_load, key=node_load.get)
-    print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
-    return node
-```
-Pero además debemos modificar los manifiestos de los pods para que tengan los labels por los cuales se deben filtar. 
-
-- Para filtrar nodos por env=prod o para la política de spread (app=<nombre>), el Pod debe tener labels:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-pod
-  namespace: test-scheduler
-  labels:
-    app: my-app    # Para la política de spread
-    env: prod      # Para filtrar nodos por entorno
-spec:
-  schedulerName: my-scheduler
-  containers:
-  - name: pause
-    image: registry.k8s.io/pause:3.9
-```
-
-Además, hemo modificado el código principal para que no se quede los **Pods** que **no tienen** el **label prod^^ a **Pending**.
-Lo que hicimos es que se eliminen del sistema:
-```Python
-    w = watch.Watch()
-    while running:
-        try:
-            for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
-                if not running:
-                    break
-                pod = event['object']
-                if not pod or not hasattr(pod, 'spec'):
-                    continue
-                if event['type'] not in ("ADDED", "MODIFIED"):
-                    continue
-                # Detectar pod pendiente con scheduler custom
-                if (pod.status.phase == "Pending" and
-                      pod.spec.scheduler_name == args.scheduler_name and
-                                   not pod.spec.node_name):
-
-                    record_trace(pod, "ADDED")
-
-                    try:
-                        # Intentar elegir nodo compatible
-                        node = choose_node(api, pod)
-                        if bind_pod(api, pod, node):
-                            record_trace(pod, "BOUND")
-                            print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
-                        else:
-                            print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo programar")
-                    except RuntimeError as e:
-                        # No hay nodos compatibles → reasignar scheduler default
-                        print(f"[warn] No hay nodos compatibles para {pod.metadata.name}, reasignando scheduler default")
-                        body = {"spec": {"schedulerName": None}}
-                        try:
-                            api.patch_namespaced_pod(pod.metadata.name, pod.metadata.namespace, body)
-                            print(f"[info] Pod {pod.metadata.name} reasignado al scheduler default")
-                        except client.rest.ApiException as patch_e:
-                            print(f"[error] No se pudo reasignar scheduler de {pod.metadata.name}: {patch_e}")
-        except Exception as e:
-            print(f"[error] Error al programar {pod.metadata.name}: {e}")
-```
- 
-Además de modificar lso manifiestos de **test-basic.yaml** y **test-nginx-pod.yaml** añadiendoles el label **prod**
-
+Pods que se programan (env=prod) deben llevar labels como:- Para `test-pod-yaml`:
 ```yaml
   labels:
     app: pause-app
     env: prod
 ```
-
+- Para `test-nginx-pod.yaml`:
 ```yaml
   labels:
     app: nginx-app
     env: prod
 ```
-Hemos creado otro **Pod** que no tenga ese label (**test-dev-pod.yaml**) y pueda verse que no se llega a Running sino que se elimina del 
+Además, hemos creado otro **Pod** que no tenga ese label (**test-dev-pod.yaml**) y pueda verse que no se llega a Running sino que se elimina del 
 clúster.
 
 ```yaml
@@ -1593,6 +1502,100 @@ spec:
     image: busybox
     command: ["sleep", "3600"]
 ```
+En Python, el filtrado de nodos se realiza así:
+```python
+ pod_env = pod.metadata.labels.get("env") if pod.metadata.labels else None
+if pod_env != "prod":
+    # Rechazar pod y eliminarlo del cluster
+    api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
+    continue
+```
+Los pods prod se intentan programar en cualquier nodo compatible con sus tolerations.
+
+Los pods que no son prod se eliminan automáticamente, evitando que queden Pending y saturen el cluster.
+
+La función para la elección del nodo (choose_node):
+
+```python
+def choose_node(api, pod):
+    nodes = [n for n in api.list_node().items if is_node_compatible(n, pod)]
+    if not nodes:
+        return None  # No hay nodos compatibles → pod rechazado
+
+    pods = api.list_pod_for_all_namespaces().items
+    node_load = {n.metadata.name: 0 for n in nodes}
+
+    pod_app_label = pod.metadata.labels.get("app") if pod.metadata.labels else None
+    for p in pods:
+        if p.spec.node_name in node_load:
+            if not pod_app_label or (p.metadata.labels and p.metadata.labels.get("app") == pod_app_label):
+                node_load[p.spec.node_name] += 1
+
+    node = min(node_load, key=node_load.get)
+    print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
+    return node
+```
+- Se consideran todos los nodos compatibles con el pod (según tolerations/taints).
+- Se balancea la carga de pods según su label app.
+- Si no hay nodos disponibles, la función devuelve None y el pod se rechaza.
+  
+Lo que hicimos es que se eliminen del sistema:
+```Python
+    while running:
+        try:
+            for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
+                if not running:
+                    break
+                pod = event['object']
+                if not pod or not hasattr(pod, 'spec'):
+                    continue
+                if event['type'] not in ("ADDED", "MODIFIED"):
+                    continue
+                # Detectar pod pendiente con scheduler custom
+                if (pod.status.phase == "Pending" and
+                      pod.spec.scheduler_name == args.scheduler_name and
+                      not pod.spec.node_name):
+
+                    record_trace(pod, "ADDED")
+
+                    try:
+                        node = choose_node(api, pod)
+                        if node:
+                            if bind_pod(api, pod, node):
+                                record_trace(pod, "BOUND")
+                                print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+                            else:
+                                print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo bindear")
+                        else:
+                            # Rechazar pod si no hay nodos prod disponibles
+                            print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado: no hay nodos prod disp
+onibles")
+                            try:
+                                api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
+                                print(f"[info] Pod {pod.metadata.name} eliminado del cluster")
+                            except client.rest.ApiException as e:
+                                print(f"[error] No se pudo eliminar {pod.metadata.name}: {e}")
+                    except RuntimeError as e:
+                        # No hay nodos compatibles → rechazamos pod
+                        print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado: {e}")
+                        try:
+                            api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
+                            print(f"[info] Pod {pod.metadata.name} eliminado del cluster")
+                        except client.rest.ApiException as e:
+                            print(f"[error] No se pudo eliminar {pod.metadata.name}: {e}")
+
+        except Exception as e:
+            print(f"[error] Error al programar {pod.metadata.name if pod else 'unknown'}: {e}")
+```
+ 
+Esto garantiza que:
+
+- Solo los pods prod se ejecutan.
+- Los pods dev u otros no quedan en Pending.
+- Evitamos saturar los nodos con pods que no deberían ejecutarse.
+
+
+
 
 Los pasos utilizados para comprobar eñ código del scheduler personaliozado son:
 

@@ -1665,22 +1665,22 @@ kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
 kubectl get pods -n test-scheduler -o wide
 ```
 
-Interpretación esperada:
-
-test-pod y test-nginx-pod → Running en nodo con env=prod
-
-test-dev-pod → No programado por scheduler custom; reasignado al scheduler default y luego Running.
 
 10. Revisar eventos del namespace
 ```Bash 
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
 ```
 
-Se ven los eventos de (imagen --123--) :
+<img width="1119" height="623" alt="image" src="https://github.com/user-attachments/assets/59feec14-7485-4fd6-8e36-7e25208b8019" />
 
-Added / Scheduled / Bound (pods programados por scheduler custom)
+vemnos:
+Interpretación esperada:
 
-Warning + reasignación (pods dev que no tenían nodos compatibles)
+test-pod y test-nginx-pod → Running en nodo con env=prod
+
+test-dev-pod → No programado (Pending) por scheduler custom; reasignado al scheduler default y luego Running.
+
+
 
 
 --123--

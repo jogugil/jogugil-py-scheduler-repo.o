@@ -1633,13 +1633,7 @@ kubectl delete namespace test-scheduler
 ```Bash
 kubectl create namespace test-scheduler
 ```
-6. Etiquetar nodos con env=prod (para filtrar pods prod)
-
-```Bash
-kubectl label node sched-lab-control-plane env=prod
-kubectl label node sched-lab-worker env=prod
-```
-7. Desplegar el scheduler custom
+6. Desplegar el scheduler custom:
 
 ```Bash
 kubectl apply -f rbac-deploy.yaml
@@ -1655,21 +1649,21 @@ kubectl get pods -n kube-system
 
 Vemos que `my-scheduler` está en `running`.
 
-8. Aplicar pods de prueba
+7. Aplicar pods de prueba
 
 ```Bash
 kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
 kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
 kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
 ```
-9. Ver estado de los pods
+
+8. Ver estado de los pods
 
 ```Bash
 kubectl get pods -n test-scheduler -o wide
 ```
 
-
-10. Revisar eventos del namespace
+9. Revisar eventos del namespace
 ```Bash 
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
 ```
@@ -1685,6 +1679,18 @@ test-dev-pod → No programado (Pending) por scheduler custom; reasignado al sch
 
 
 
+
+Notar que si en vez de fiultar `pods` quisieramos filtrar `nodos` pondriamos en el python:
+
+```Python
+nodes = [n for n in api.list_node().items if is_node_compatible(n, pod)]
+```
+y se invocarian los nodos con la variable entorno 
+
+```Bash
+kubectl label node sched-lab-control-plane env=prod
+kubectl label node sched-lab-worker env=prod
+```
 
 --123--
 

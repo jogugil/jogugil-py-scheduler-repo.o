@@ -1617,7 +1617,17 @@ docker build --no-cache -t my-py-scheduler:latest .
 3. Cargar la imagen en Kind
 
 ```Bash
-kind load docker-image my-py-scheduler:latest --name sched-lab
+kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab-control-plane
+```
+Notar que sólo cargamos la imagen del `my-py-scheduler` en el `control plane`.
+```Bash
+docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
+```
+
+Si se queire ver que en el `worker` nmo estñá cargada la imágen del  `custom scheduler`podemos lsitar todas las imagenes del nodo `worker`.
+
+```Bash
+docker exec -it sched-lab-worker crictl images
 ```
 4. Borrar despliegues y pods antiguos
 

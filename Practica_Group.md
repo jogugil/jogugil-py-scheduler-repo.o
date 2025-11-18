@@ -1619,16 +1619,22 @@ docker build --no-cache -t my-py-scheduler:latest .
 ```Bash
 kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab-control-plane
 ```
-Notar que sólo cargamos la imagen del `my-py-scheduler` en el `control plane`.
+Notar que únicamente cargamos la imagen del `my-py-scheduler` en el `control plane`.
+
 ```Bash
 docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 ```
 
-Si se queire ver que en el `worker` nmo estñá cargada la imágen del  `custom scheduler`podemos lsitar todas las imagenes del nodo `worker`.
+Si queremos comprobar que la imagen del  `custom scheduler ` no está presente en el nodo  `worker `, podemos listar todas las imágenes de ese nodo.
 
 ```Bash
 docker exec -it sched-lab-worker crictl images
 ```
+<img width="872" height="568" alt="image" src="https://github.com/user-attachments/assets/715ec8f3-bccb-402f-815a-b6c9b5fde237" />
+
+Vemos  en la captura de pantalla que el worker no contiene ninguna imagen my-py-scheduler, mientras que el control-plane sí la tiene cargada.
+
+
 4. Borrar despliegues y pods antiguos
 
 ```Bash

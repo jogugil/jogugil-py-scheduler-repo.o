@@ -1602,6 +1602,7 @@ kubectl get nodes
 <img width="1228" height="521" alt="image" src="https://github.com/user-attachments/assets/77ad5269-15cd-44d7-b39c-fb5ef59268f2" />
 
 Vemos que el cluster está listo con el `control plane` y los dos `workers`.
+
 4. Construir la nueva imagen del scheduler:
 
 ```bash

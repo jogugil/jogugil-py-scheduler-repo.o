@@ -1743,6 +1743,115 @@ spec:
         imagePullPolicy: Never
         args: ["--scheduler-name","my-scheduler"]
 ```
+Vamos a generar un nuevo nodo con un tain especial y un nuevo pod que sólo se pueada asignar a ese nuevo nodo (worker).
+
+1. Modificamos el manifiesto de creación del clsuter para añadir un nuevo nodo:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+  - role: worker
+  - role: worker
+  - role: worker
+```
+
+2. Borrar el cluster actual y crear uno nuevo usando este manifiesto:
+
+```bash
+kind delete cluster --name sched-lab
+kind create cluster --name sched-lab --config kind-config.yaml
+```
+3. Etiquetar los nodos como `env=prod`:
+   
+```bash
+kubectl label node sched-lab-worker env=prod
+kubectl label node sched-lab-worker2 env=prod
+kubectl label node sched-lab-worker3 env=prod
+```
+4. Aplicar el taint en el tercer nodo (worker3) para que solo pods con la toleration adecuada puedan ejecutarse:
+   
+```bash
+kubectl taint nodes sched-lab-worker3 example=true:NoSchedule
+```
+Con esto, cualquier pod que no tenga la toleration key=example, value=true, effect=NoSchedule no podrá programarse en worker3.
+
+5. Verificar que el cluster está listo
+```bash
+kubectl cluster-info --context kind-sched-lab
+kubectl get nodes
+```
+<img width="1228" height="521" alt="image" src="https://github.com/user-attachments/assets/77ad5269-15cd-44d7-b39c-fb5ef59268f2" />
+
+Vemos que el cluster está listo con el `control plane` y los dos `workers`.
+
+6. Construir la nueva imagen del scheduler:
+
+```bash
+docker build --no-cache -t my-py-scheduler:latest .
+```
+
+7. Cargar la imagen en Kind:
+
+```bash
+kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab-control-plane
+```
+
+8. Verificar que la imagen está en el control-plane:
+
+```bash
+docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
+```
+<img width="1225" height="536" alt="image" src="https://github.com/user-attachments/assets/04c16665-547e-4820-b880-a22709818f77" />
+Comprobamos que la imagen de mi `my-py-scheduler`está en el `control plane` cargada.
+
+9. Crear namespace para pruebas:
+
+```bash
+kubectl create namespace test-scheduler
+```
+
+10.  Desplegar el scheduler custom solo en control-plane
+
+```bash
+kubectl apply -f rbac-deploy.yaml
+kubectl get deployment -n kube-system
+kubectl get pods -n kube-system
+```
+<img width="1234" height="499" alt="image" src="https://github.com/user-attachments/assets/d47a7e8f-a871-4ccf-82bc-c407e55cb868" />
+
+Vemos que tenemos cargado el `my-scheduler` en el `control plane`.
+
+11. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
+
+```bash
+kubectl label node sched-lab-control-plane env=prod
+kubectl label node sched-lab-worker env=prod
+```
+
+12. Aplicar pods de prueba:
+
+```bash
+kubectl apply -f test-pod.yaml -n test-scheduler       
+kubectl apply -f test-nginx-pod.yaml -n test-scheduler  
+```
+
+13. Ver estado de los pods:
+
+```bash
+kubectl get pods -n test-scheduler -o wide
+```
+
+14. Revisar eventos del namespace:
+
+```bash
+kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
+```
 
 ### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
 

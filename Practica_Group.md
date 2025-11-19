@@ -1594,7 +1594,7 @@ kubectl delete namespace test-scheduler
 kubectl create namespace test-scheduler
 ```
 
-7. Desplegar el scheduler custom:
+7.  Desplegar el scheduler custom solo en control-plane
 
 ```bash
 kubectl apply -f rbac-deploy.yaml
@@ -1602,7 +1602,7 @@ kubectl get deployment -n kube-system
 kubectl get pods -n kube-system
 ```
 
-8. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
+9. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
 
 ```bash
 kubectl label node sched-lab-control-plane env=prod

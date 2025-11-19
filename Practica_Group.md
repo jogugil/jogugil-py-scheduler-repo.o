@@ -1553,7 +1553,7 @@ kind delete cluster --name sched-lab
 ```
 2. Crear un nuevo cluster
 ```bash
-kind create cluster --name sched-lab
+kind create cluster --name sched-lab --config kind-config.yaml
 ```
 Notar que hemos creado u n uevop manifiesto para crear un cluster con un `control plane` y dos `workers`para comprobar el fioltrado por nodo.
 

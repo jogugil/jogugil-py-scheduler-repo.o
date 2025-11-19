@@ -1666,9 +1666,11 @@ kubectl get pods -n test-scheduler -o wide
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
 ```
 
---123--
+ <img width="1234" height="529" alt="image" src="https://github.com/user-attachments/assets/fdba61cf-7ba0-4f6d-b67a-7e62383bf373" />
 
-Otro ejemplo que hemos usado es en la implementación de los **benchmarking** hemos usado ***labels:{app: my-app}*** para simplificar
+Vemos como los `pods`se asignaron al nodo `sched-lab-worker` que es quien tiene el label `env=prod`. 
+
+Otro ejemplo del usop de lanbels se ve en la implementación de los **benchmarking** dobde hemos usado ***labels:{app: my-app}*** para simplificar
 el nombnre del scheduler personaizado en los comandos kubernetes. Esto nos permite:
 
 - Identificar fácilmente los recursos de nuestro scheduler personalizado sin depender de nombres específicos
@@ -1676,8 +1678,6 @@ el nombnre del scheduler personaizado en los comandos kubernetes. Esto nos permi
 - Simplificar los comandos kubectl en nuestro script
 
 - Hacer nuestro código más mantenible y robusto frente a recreaciones de pods
-
-
 
 ```bash
 # En show_scheduler_logs():
@@ -1690,8 +1690,6 @@ SCHEDULER_POD=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath=
 pods=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[*].metadata.name}')
 ```
 
---1232-- HAy que modificarlo y probar, sacar imagenes del filtrado o logs en el cñódigo de scheduler.py
-
 ### 2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes before scoring.
 
 En nuestro script implementamos taints y tolerations principalmente para el scheduler personalizado. Como sabemos, los 
@@ -1700,8 +1698,26 @@ custom scheduler necesita estar en el control-plane para acceder a los recursos 
 **rbac-deploy.yaml** que aplicamos contiene las tolerations necesarias. Sin estas tolerations, el pod de nuestro scheduler 
 quedaría en estado Pending:
 
-
 ```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: my-scheduler-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+- kind: ServiceAccount
+  name: my-scheduler
+  namespace: kube-system
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1716,16 +1732,15 @@ spec:
       labels: {app: my-scheduler}
     spec:
       serviceAccountName: my-scheduler
-      nodeSelector:
-        kubernetes.io/hostname: sched-lab-control-plane
       tolerations:
       - key: "node-role.kubernetes.io/control-plane"
-        operator: "Exists"
         effect: "NoSchedule"
+      nodeSelector:
+        kubernetes.io/hostname: sched-lab-control-plane
       containers:
       - name: scheduler
-        imagePullPolicy: Never
         image: my-py-scheduler:latest
+        imagePullPolicy: Never
         args: ["--scheduler-name","my-scheduler"]
 ```
 

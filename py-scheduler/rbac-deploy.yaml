@@ -31,6 +31,11 @@ spec:
       labels: {app: my-scheduler}
     spec:
       serviceAccountName: my-scheduler
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        effect: "NoSchedule"
+      nodeSelector:
+        kubernetes.io/hostname: sched-lab-control-plane
       containers:
       - name: scheduler
         image: my-py-scheduler:latest

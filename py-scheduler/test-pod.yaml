@@ -4,8 +4,7 @@ metadata:
   name: test-pod
   namespace: test-scheduler
   labels:
-    app: pause-app
-    env: prod
+    app: my-scheduler
 spec:
   schedulerName: my-scheduler
   containers:

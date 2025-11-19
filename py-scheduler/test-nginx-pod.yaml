@@ -4,8 +4,7 @@ metadata:
   name: test-nginx-pod
   namespace: test-scheduler
   labels:
-    app: nginx-app
-    env: prod
+    app: my-scheduler
 spec:
   schedulerName: my-scheduler
   restartPolicy: Never

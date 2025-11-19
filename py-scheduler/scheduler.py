@@ -4,6 +4,11 @@ from kubernetes import client, config, watch
 import signal
 
 running = True
+REJECTION_LABEL = "scheduler-rejected"
+REJECTION_TIMEOUT = 300  # segundos que ignoramos el pod
+
+
+
 
 # Handler para Ctrl+C o SIGTERM
 def signal_handler(sig, frame):
@@ -13,6 +18,23 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
+
+def pod_recently_rejected(pod):
+    if pod.metadata.annotations and REJECTION_LABEL in pod.metadata.annotations:
+        ts_str = pod.metadata.annotations[REJECTION_LABEL]
+        ts = datetime.datetime.fromisoformat(ts_str)
+        now = datetime.datetime.utcnow()
+        return (now - ts).total_seconds() < REJECTION_TIMEOUT
+    return False
+
+# Añadir o actualizar annotation para marcar pod como rechazado
+def mark_pod_rejected(api, pod):
+    if not pod.metadata.annotations:
+        pod.metadata.annotations = {}
+    pod.metadata.annotations[REJECTION_LABEL] = datetime.datetime.utcnow().isoformat()
+    api.patch_namespaced_pod(pod.metadata.name, pod.metadata.namespace, pod)
+    print(f"[info] Pod {pod.metadata.name} marcado como rechazado temporalmente")
 
 # Cargar cliente Kubernetes
 def load_client(kubeconfig=None):
@@ -29,6 +51,12 @@ def load_client(kubeconfig=None):
 
 # Comprobar si nodo es compatible con tolerations del pod
 def is_node_compatible(node, pod):
+
+    # --- FILTRO DE NODOS POR LABEL env=prod ---
+    node_env = node.metadata.labels.get("env") if node.metadata.labels else None
+    if node_env != "prod":
+        return False
+
     if not pod.spec.tolerations:
         return True
     node_taints = node.spec.taints or []
@@ -43,16 +71,13 @@ def is_node_compatible(node, pod):
 
 # Elegir nodo según menor carga y compatibilidad
 def choose_node(api, pod):
-    nodes = [n for n in api.list_node().items
-             if n.metadata.labels and n.metadata.labels.get("env") == pod.metadata.labels.get("env")
-             and is_node_compatible(n, pod)]
+    nodes = [n for n in api.list_node().items if is_node_compatible(n, pod)]
     if not nodes:
-        raise RuntimeError("No hay nodos disponibles compatibles")
+        return None  # No hay nodos compatibles → pod rechazado
 
     pods = api.list_pod_for_all_namespaces().items
     node_load = {n.metadata.name: 0 for n in nodes}
 
-    # Contar solo Pods del mismo app para balance
     pod_app_label = pod.metadata.labels.get("app") if pod.metadata.labels else None
     for p in pods:
         if p.spec.node_name in node_load:
@@ -113,37 +138,39 @@ def main():
             for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
                 if not running:
                     break
+
                 pod = event['object']
                 if not pod or not hasattr(pod, 'spec'):
                     continue
+
                 if event['type'] not in ("ADDED", "MODIFIED"):
                     continue
-                # Detectar pod pendiente con scheduler custom
-                if (pod.status.phase == "Pending" and
-                      pod.spec.scheduler_name == args.scheduler_name and
-                                   not pod.spec.node_name):
 
+                if pod_recently_rejected(pod):
+                    # Ignorar pods que han sido rechazados recientemente
+                    continue
+
+                # Solo procesar pods pendientes con nuestro scheduler
+                if pod.status.phase == "Pending" and pod.spec.scheduler_name == args.scheduler_name and not pod.spec.node_name:
                     record_trace(pod, "ADDED")
 
                     try:
-                        # Intentar elegir nodo compatible
                         node = choose_node(api, pod)
-                        if bind_pod(api, pod, node):
-                            record_trace(pod, "BOUND")
-                            print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+                        if node:
+                            if bind_pod(api, pod, node):
+                                record_trace(pod, "BOUND")
+                                print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
+                            else:
+                                print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo bindear")
                         else:
-                            print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo programar")
+                            # No hay nodos compatibles → marcar como rechazado temporalmente
+                            mark_pod_rejected(api, pod)
+                            print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado temporalmente: no hay nodos compatibles")
                     except RuntimeError as e:
-                        # No hay nodos compatibles → reasignar scheduler default
-                        print(f"[warn] No hay nodos compatibles para {pod.metadata.name}, reasignando scheduler default")
-                        body = {"spec": {"schedulerName": None}}
-                        try:
-                            api.patch_namespaced_pod(pod.metadata.name, pod.metadata.namespace, body)
-                            print(f"[info] Pod {pod.metadata.name} reasignado al scheduler default")
-                        except client.rest.ApiException as patch_e:
-                            print(f"[error] No se pudo reasignar scheduler de {pod.metadata.name}: {patch_e}")
+                        # Error de compatibilidad → marcar como rechazado temporalmente
+                        mark_pod_rejected(api, pod)
+                        print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado temporalmente: {e}")
         except Exception as e:
-            print(f"[error] Error al programar {pod.metadata.name}: {e}")
-
+            print(f"[error] Error al programar {pod.metadata.name if pod else 'unknown'}: {e}")
 if __name__ == "__main__":
     main()

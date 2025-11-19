@@ -1556,7 +1556,9 @@ docker rmi my-py-scheduler:latest
 
 # Borrar la imagen en nodos del cluster Kind
 docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
-docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
+# En teoría el scheduler personalizado sólo debe estar en el control plane pero por si acaso se elimina.
+# Debe dar error
+docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest 
 ```
 2. Construir la nueva imagen del scheduler:
 

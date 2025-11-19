@@ -1547,14 +1547,25 @@ spec:
   
 Los pasos para comprobar el funcionamiento del scheduler personalizado, ahora basado en filtrado por nodos de producción `(env=prod)`, son los siguientes:
 
-# 1) Borrar el cluster existente
+1. Borrar el cluster existente
 ```bash
 kind delete cluster --name sched-lab
 ```
-# 2) Crear un nuevo cluster
+2. Crear un nuevo cluster
 ```bash
 kind create cluster --name sched-lab
 ```
+Notar que hemos creado u n uevop manifiesto para crear un cluster con un `control plane` y dos `workers`para comprobar el fioltrado por nodo.
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+``` 
+
 # 3) Verificar que el cluster está listo
 ```bash
 kubectl cluster-info --context kind-sched-lab

@@ -1565,6 +1565,35 @@ nodes:
   - role: worker
   - role: worker
 ``` 
+También debemos modificar el manifiesto del `my-scheduler` añadiendo el bloque de `tolerations` y un `nodeSelector` para que el pod pueda programarse en el nodo control-plane, que `por defecto` tiene un `taint` que `evita que se ejecuten pods no tolerantes`. Esto asegura que el `scheduler personalizado` utilice la imagen que hemos cargado localmente en el nodo del control plane y arranque correctamente sin intentar tirar del registry externo.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: my-scheduler}
+  template:
+    metadata:
+      labels: {app: my-scheduler}
+    spec:
+      serviceAccountName: my-scheduler
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        effect: "NoSchedule"
+      nodeSelector:
+        kubernetes.io/hostname: sched-lab-control-plane
+      containers:
+      - name: scheduler
+        image: my-py-scheduler:latest
+        imagePullPolicy: Never
+        args: ["--scheduler-name","my-scheduler"]
+```
+        
 
 3. Verificar que el cluster está listo
 ```bash

@@ -1603,8 +1603,11 @@ kubectl apply -f rbac-deploy.yaml
 kubectl get deployment -n kube-system
 kubectl get pods -n kube-system
 ```
+<img width="1234" height="499" alt="image" src="https://github.com/user-attachments/assets/d47a7e8f-a871-4ccf-82bc-c407e55cb868" />
 
-9. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
+Vemos que tenemos cargado el `my-scheduler` en el `control plane`.
+
+8. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
 
 ```bash
 kubectl label node sched-lab-control-plane env=prod

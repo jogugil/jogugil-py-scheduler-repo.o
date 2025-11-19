@@ -1465,7 +1465,7 @@ Para poder hacer una comparación más exhaustiva **se han creado unos scripts p
 
 ## 🧩 Step 8 — Policy Extensions
 
-1. Label-based node filtering
+### 1. Label-based node filtering
 
 Para que los pods solo se ejecuten en nodos de producción, el scheduler personalizado usa la función `is_node_compatible(node, pod)`, que evalúa si un nodo puede recibir un pod según estas reglas:
 
@@ -1594,7 +1594,6 @@ spec:
         args: ["--scheduler-name","my-scheduler"]
 ```
         
-
 3. Verificar que el cluster está listo
 ```bash
 kubectl cluster-info --context kind-sched-lab
@@ -1623,23 +1622,13 @@ docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 <img width="1225" height="536" alt="image" src="https://github.com/user-attachments/assets/04c16665-547e-4820-b880-a22709818f77" />
 Comprobamos que la imagen de mi `my-py-scheduler`está en el `control plane` cargada.
 
-7. Borrar despliegues y pods antiguos:
-
-```bash
-kubectl delete deployment my-scheduler -n kube-system
-kubectl delete pod test-pod -n test-scheduler
-kubectl delete pod test-nginx-pod -n test-scheduler
-kubectl delete pod test-dev-pod -n test-scheduler
-kubectl delete namespace test-scheduler
-```
-
-8. Crear namespace para pruebas:
+7. Crear namespace para pruebas:
 
 ```bash
 kubectl create namespace test-scheduler
 ```
 
-9.  Desplegar el scheduler custom solo en control-plane
+8.  Desplegar el scheduler custom solo en control-plane
 
 ```bash
 kubectl apply -f rbac-deploy.yaml
@@ -1650,14 +1639,14 @@ kubectl get pods -n kube-system
 
 Vemos que tenemos cargado el `my-scheduler` en el `control plane`.
 
-10. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
+9. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
 
 ```bash
 kubectl label node sched-lab-control-plane env=prod
 kubectl label node sched-lab-worker env=prod
 ```
 
-11. Aplicar pods de prueba:
+10. Aplicar pods de prueba:
 
 ```bash
 kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
@@ -1665,13 +1654,13 @@ kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
 kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
 ```
 
-12. Ver estado de los pods:
+11. Ver estado de los pods:
 
 ```bash
 kubectl get pods -n test-scheduler -o wide
 ```
 
-13. Revisar eventos del namespace:
+12. Revisar eventos del namespace:
 
 ```bash
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
@@ -1703,7 +1692,7 @@ pods=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[
 
 --1232-- HAy que modificarlo y probar, sacar imagenes del filtrado o logs en el cñódigo de scheduler.py
 
-2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes before scoring.
+### 2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes before scoring.
 
 En nuestro script implementamos taints y tolerations principalmente para el scheduler personalizado. Como sabemos, los 
 control-planes de Kubernetes tienen taints por defecto que evitan que pods normales se ejecuten en ellos, pero nuestro 
@@ -1740,7 +1729,7 @@ spec:
         args: ["--scheduler-name","my-scheduler"]
 ```
 
-3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
+### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
 
 Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos
 usado esta estrategia. Por ejemplo:
@@ -1793,7 +1782,7 @@ create_kind_cluster() {
 ```
 --123-- Faltaria implementar en el scheduler.py
 
-4. Spread policy Distribute similar Pods evenly across Nodes.
+### 4. Spread policy Distribute similar Pods evenly across Nodes.
 
 Del mismo modo, implementamos una política de distribución mediante round-robin en nuestro script. Se pùed ver en 
 la función ***load_pods_from_yaml*** del script **bechmarking_2/start.sh**:

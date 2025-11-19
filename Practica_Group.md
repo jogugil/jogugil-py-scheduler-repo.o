@@ -1566,24 +1566,24 @@ nodes:
   - role: worker
 ``` 
 
-# 3) Verificar que el cluster está listo
+3. Verificar que el cluster está listo
 ```bash
 kubectl cluster-info --context kind-sched-lab
 kubectl get nodes
 ```
-2. Construir la nueva imagen del scheduler:
+4. Construir la nueva imagen del scheduler:
 
 ```bash
 docker build --no-cache -t my-py-scheduler:latest .
 ```
 
-3. Cargar la imagen en Kind:
+5. Cargar la imagen en Kind:
 
 ```bash
 kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab-control-plane
 ```
 
-4. Verificar que la imagen está en el control-plane:
+6. Verificar que la imagen está en el control-plane:
 
 ```bash
 docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
@@ -1591,7 +1591,7 @@ docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 <img width="1225" height="536" alt="image" src="https://github.com/user-attachments/assets/04c16665-547e-4820-b880-a22709818f77" />
 Comprobamos que la imagen de mi `my-py-scheduler`está en el `control plane` cargada.
 
-5. Borrar despliegues y pods antiguos:
+7. Borrar despliegues y pods antiguos:
 
 ```bash
 kubectl delete deployment my-scheduler -n kube-system
@@ -1601,13 +1601,13 @@ kubectl delete pod test-dev-pod -n test-scheduler
 kubectl delete namespace test-scheduler
 ```
 
-6. Crear namespace para pruebas:
+8. Crear namespace para pruebas:
 
 ```bash
 kubectl create namespace test-scheduler
 ```
 
-7.  Desplegar el scheduler custom solo en control-plane
+9.  Desplegar el scheduler custom solo en control-plane
 
 ```bash
 kubectl apply -f rbac-deploy.yaml
@@ -1618,14 +1618,14 @@ kubectl get pods -n kube-system
 
 Vemos que tenemos cargado el `my-scheduler` en el `control plane`.
 
-8. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
+10. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
 
 ```bash
 kubectl label node sched-lab-control-plane env=prod
 kubectl label node sched-lab-worker env=prod
 ```
 
-9. Aplicar pods de prueba:
+11. Aplicar pods de prueba:
 
 ```bash
 kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
@@ -1633,13 +1633,13 @@ kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
 kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
 ```
 
-10. Ver estado de los pods:
+12. Ver estado de los pods:
 
 ```bash
 kubectl get pods -n test-scheduler -o wide
 ```
 
-11. Revisar eventos del namespace:
+13. Revisar eventos del namespace:
 
 ```bash
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'

@@ -1650,9 +1650,8 @@ kubectl label node sched-lab-worker env=prod
 10. Aplicar pods de prueba:
 
 ```bash
-kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
-kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
-kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
+kubectl apply -f test-pod.yaml -n test-scheduler       
+kubectl apply -f test-nginx-pod.yaml -n test-scheduler  
 ```
 
 11. Ver estado de los pods:

@@ -266,7 +266,6 @@ def bind_pod(api: client.CoreV1Api, pod, node_name: str):
         print("ERROR DETALLADO:", repr(e))
 
 ```
-
 **Modificamos** el código del **scheduler polling** para generar el binding del Pod y asignarle un nodo de ejecución usando el parámetro que evita la serialización del evento de asignación y por tanto la excepción. Tras aplicar la modificación, borramos los Pods existentes y la imagen cargada, para poder reconstruirla y ejecutar todo nuevamente desde cero.
 
 1. Borrar la imagen local:
@@ -1548,17 +1547,18 @@ spec:
   
 Los pasos para comprobar el funcionamiento del scheduler personalizado, ahora basado en filtrado por nodos de producción `(env=prod)`, son los siguientes:
 
-1. Borrar imágenes anteriores:
-
+# 1) Borrar el cluster existente
 ```bash
-# Borrar la imagen local
-docker rmi my-py-scheduler:latest
-
-# Borrar la imagen en nodos del cluster Kind
-docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
-# En teoría el scheduler personalizado sólo debe estar en el control plane pero por si acaso se elimina.
-# Debe dar error
-docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest 
+kind delete cluster --name sched-lab
+```
+# 2) Crear un nuevo cluster
+```bash
+kind create cluster --name sched-lab
+```
+# 3) Verificar que el cluster está listo
+```bash
+kubectl cluster-info --context kind-sched-lab
+kubectl get nodes
 ```
 2. Construir la nueva imagen del scheduler:
 

@@ -1786,9 +1786,10 @@ Con esto, cualquier pod que no tenga la toleration key=example, value=true, effe
 kubectl cluster-info --context kind-sched-lab
 kubectl get nodes
 ```
-<img width="1228" height="521" alt="image" src="https://github.com/user-attachments/assets/77ad5269-15cd-44d7-b39c-fb5ef59268f2" />
+ <img width="1176" height="541" alt="image" src="https://github.com/user-attachments/assets/6041e989-733c-4080-a663-8d7eb818b538" />
 
-Vemos que el cluster está listo con el `control plane` y los dos `workers`.
+
+Vemos que el cluster está listo con el `control plane` y los tres `workers`.
 
 6. Construir la nueva imagen del scheduler:
 
@@ -1807,7 +1808,8 @@ kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab
 ```bash
 docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 ```
-<img width="1225" height="536" alt="image" src="https://github.com/user-attachments/assets/04c16665-547e-4820-b880-a22709818f77" />
+ <img width="1174" height="516" alt="image" src="https://github.com/user-attachments/assets/5cf2683f-426e-45be-999c-b4dcc9ecfee3" />
+
 Comprobamos que la imagen de mi `my-py-scheduler`está en el `control plane` cargada.
 
 9. Crear namespace para pruebas:
@@ -1823,25 +1825,20 @@ kubectl apply -f rbac-deploy.yaml
 kubectl get deployment -n kube-system
 kubectl get pods -n kube-system
 ```
-<img width="1234" height="499" alt="image" src="https://github.com/user-attachments/assets/d47a7e8f-a871-4ccf-82bc-c407e55cb868" />
+ <img width="1217" height="494" alt="image" src="https://github.com/user-attachments/assets/7bab9175-3cc3-432a-8da1-92f8a1fa62f6" />
+
 
 Vemos que tenemos cargado el `my-scheduler` en el `control plane`.
 
-11. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
-
-```bash
-kubectl label node sched-lab-control-plane env=prod
-kubectl label node sched-lab-worker env=prod
-```
-
-12. Aplicar pods de prueba:
+11. Aplicar pods de prueba:
 
 ```bash
 kubectl apply -f test-pod.yaml -n test-scheduler       
-kubectl apply -f test-nginx-pod.yaml -n test-scheduler  
+kubectl apply -f test-nginx-pod.yaml -n test-scheduler
+kubectl apply -f test-worker3-pod.yaml -n test-scheduler  
 ```
 
-13. Ver estado de los pods:
+12. Ver estado de los pods:
 
 ```bash
 kubectl get pods -n test-scheduler -o wide
@@ -1852,6 +1849,10 @@ kubectl get pods -n test-scheduler -o wide
 ```bash
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
 ```
+
+<img width="1238" height="475" alt="image" src="https://github.com/user-attachments/assets/fc091052-548a-4f89-9891-70b144171c30" />
+
+Cómo hemos etiquetado todos los nodos con el label `env=prod`, se le puede asignar un pod a cualqueir nodo. Pero vemos que el pod `test-worker3-pod`, que es el quien tiene el tolerations del `worker3`, se asigna sólo al `worker3`.
 
 ### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
 

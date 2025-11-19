@@ -1468,51 +1468,40 @@ Para poder hacer una comparación más exhaustiva **se han creado unos scripts p
 
 1. Label-based node filtering
 
-Para garantizar que solo se ejecuten `pods` **prod** y que los `pods` **dev** o cualquier otro env se rechacen, usamos labels en los pods y no en los nodos:
+Para que los pods solo se ejecuten en nodos de producción, el scheduler personalizado usa la función `is_node_compatible(node, pod)`, que evalúa si un nodo puede recibir un pod según estas reglas:
 
-Pods que se programan (env=prod) deben llevar labels como:- Para `test-pod-yaml`:
-```yaml
-  labels:
-    app: pause-app
-    env: prod
-```
-- Para `test-nginx-pod.yaml`:
-```yaml
-  labels:
-    app: nginx-app
-    env: prod
-```
-Además, hemos creado otro **Pod** que no tenga ese label (**test-dev-pod.yaml**) y pueda verse que no se llega a Running sino que se elimina del 
-clúster.
+- Filtro por label `env=prod` en el nodo: solo los nodos que tengan `env=prod` se consideran compatibles. Esto evita que los pods se programen en nodos de desarrollo o test.
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-dev-pod
-  namespace: test-scheduler
-  labels:
-    app: dev-app
-    env: dev
-spec:
-  schedulerName: my-scheduler
-  restartPolicy: Never
-  containers:
-  - name: busybox
-    image: busybox
-    command: ["sleep", "3600"]
-```
-En Python, el filtrado de nodos se realiza así:
+- Compatibilidad con taints/tolerations: si el pod no tiene tolerations se considera compatible; si las tiene, cada taint del nodo se comprueba y un taint no tolerado hace que el nodo se considere incompatible.
+
 ```python
- pod_env = pod.metadata.labels.get("env") if pod.metadata.labels else None
-if pod_env != "prod":
-    # Rechazar pod y eliminarlo del cluster
-    api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
-    continue
-```
-Los pods prod se intentan programar en cualquier nodo compatible con sus tolerations.
+def is_node_compatible(node, pod):
 
-Los pods que no son prod se eliminan automáticamente, evitando que queden Pending y saturen el cluster.
+    # --- FILTRO DE NODOS POR LABEL env=prod ---
+    node_env = node.metadata.labels.get("env") if node.metadata.labels else None
+    if node_env != "prod":
+        return False
+
+    if not pod.spec.tolerations:
+        return True
+    node_taints = node.spec.taints or []
+    for taint in node_taints:
+        tolerated = any(
+            t.key == taint.key and t.effect == taint.effect and (t.value == taint.value if t.value else True)
+            for t in pod.spec.tolerations
+        )
+        if not tolerated:
+            return False
+    return True
+```
+
+Esto asegura que:
+
+- El scheduler solo considere nodos prod para programar cualquier pod.
+
+- Los pods se asignen al nodo prod con menos carga (función choose_node).
+
+- Si no hay nodos compatibles, el pod se rechaza o queda Pending según la política.
 
 La función para la elección del nodo (choose_node):
 
@@ -1535,73 +1524,33 @@ def choose_node(api, pod):
     print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
     return node
 ```
+- Se consideran todos lso nodos de producción con `env=prod`
 - Se consideran todos los nodos compatibles con el pod (según tolerations/taints).
 - Se balancea la carga de pods según su label app.
 - Si no hay nodos disponibles, la función devuelve None y el pod se rechaza.
-  
-Lo que hicimos es que se eliminen del sistema:
-```Python
-    while running:
-        try:
-            for event in w.stream(api.list_pod_for_all_namespaces, timeout_seconds=60):
-                if not running:
-                    break
-                pod = event['object']
-                if not pod or not hasattr(pod, 'spec'):
-                    continue
-                if event['type'] not in ("ADDED", "MODIFIED"):
-                    continue
-                # Detectar pod pendiente con scheduler custom
-                if (pod.status.phase == "Pending" and
-                      pod.spec.scheduler_name == args.scheduler_name and
-                      not pod.spec.node_name):
 
-                    record_trace(pod, "ADDED")
+***Nota:*** *Para gestionar la distribución de carga de los pods en nuestros nodos de producción, hemos decidido usar el mismo valor de label app (my-scheduler) en todos los pods. De esta forma, el scheduler personalizado los considera parte de un mismo grupo y los distribuye equilibradamente entre los nodos disponibles, evitando que unos pods acaparen determinados nodos mientras otros quedan vacíos. Si quisiéramos balancear la carga por tipo de pod, podríamos asignar un app distinto a cada tipo, pero para nuestro caso nos resulta más sencillo mantener un valor único y garantizar una distribución uniforme. 
 
-                    try:
-                        node = choose_node(api, pod)
-                        if node:
-                            if bind_pod(api, pod, node):
-                                record_trace(pod, "BOUND")
-                                print(f"[success] {pod.metadata.namespace}/{pod.metadata.name} -> {node}")
-                            else:
-                                print(f"[failure] {pod.metadata.namespace}/{pod.metadata.name} no se pudo bindear")
-                        else:
-                            # Rechazar pod si no hay nodos prod disponibles
-                            print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado: no hay nodos prod disp
-onibles")
-                            try:
-                                api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
-                                print(f"[info] Pod {pod.metadata.name} eliminado del cluster")
-                            except client.rest.ApiException as e:
-                                print(f"[error] No se pudo eliminar {pod.metadata.name}: {e}")
-                    except RuntimeError as e:
-                        # No hay nodos compatibles → rechazamos pod
-                        print(f"[reject] {pod.metadata.namespace}/{pod.metadata.name} rechazado: {e}")
-                        try:
-                            api.delete_namespaced_pod(pod.metadata.name, pod.metadata.namespace)
-                            print(f"[info] Pod {pod.metadata.name} eliminado del cluster")
-                        except client.rest.ApiException as e:
-                            print(f"[error] No se pudo eliminar {pod.metadata.name}: {e}")
-
-        except Exception as e:
-            print(f"[error] Error al programar {pod.metadata.name if pod else 'unknown'}: {e}")
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: test-scheduler
+  labels:
+    app: my-scheduler
+spec:
+  schedulerName: my-scheduler
+  containers:
+  - name: pause
+    image: registry.k8s.io/pause:3.9
 ```
- 
-Esto garantiza que:
+  
+Los pasos para comprobar el funcionamiento del scheduler personalizado, ahora basado en filtrado por nodos de producción `(env=prod)`, son los siguientes:
 
-- Solo los pods prod se ejecutan.
-- Los pods dev u otros no quedan en Pending.
-- Evitamos saturar los nodos con pods que no deberían ejecutarse.
+1. Borrar imágenes anteriores:
 
-
-
-
-Los pasos utilizados para comprobar eñ código del scheduler personaliozado son:
-
-1. Borrar imágenes anteriores
-
-```Bash
+```bash
 # Borrar la imagen local
 docker rmi my-py-scheduler:latest
 
@@ -1609,103 +1558,73 @@ docker rmi my-py-scheduler:latest
 docker exec -it sched-lab-control-plane crictl rmi my-py-scheduler:latest
 docker exec -it sched-lab-worker crictl rmi my-py-scheduler:latest
 ```
-2. Construir la nueva imagen del scheduler
+2. Construir la nueva imagen del scheduler:
 
-```Bash
+```bash
 docker build --no-cache -t my-py-scheduler:latest .
 ```
-3. Cargar la imagen en Kind
 
-```Bash
+3. Cargar la imagen en Kind:
+
+```bash
 kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab-control-plane
 ```
-Notar que únicamente cargamos la imagen del `my-py-scheduler` en el `control plane`.
 
-```Bash
+4. Verificar que la imagen está en el control-plane:
+
+```bash
 docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 ```
 
-Si queremos comprobar que la imagen del  `custom scheduler ` no está presente en el nodo  `worker `, podemos listar todas las imágenes de ese nodo.
+5. Borrar despliegues y pods antiguos:
 
-```Bash
-docker exec -it sched-lab-worker crictl images
-```
-<img width="872" height="568" alt="image" src="https://github.com/user-attachments/assets/715ec8f3-bccb-402f-815a-b6c9b5fde237" />
-
-Vemos  en la captura de pantalla que el worker no contiene ninguna imagen my-py-scheduler, mientras que el control-plane sí la tiene cargada.
-
-
-4. Borrar despliegues y pods antiguos
-
-```Bash
+```bash
 kubectl delete deployment my-scheduler -n kube-system
 kubectl delete pod test-pod -n test-scheduler
 kubectl delete pod test-nginx-pod -n test-scheduler
 kubectl delete pod test-dev-pod -n test-scheduler
 kubectl delete namespace test-scheduler
 ```
-5. Crear namespace para pruebas
 
-```Bash
+6. Crear namespace para pruebas:
+
+```bash
 kubectl create namespace test-scheduler
 ```
-6. Desplegar el scheduler custom:
 
-```Bash
+7. Desplegar el scheduler custom:
+
+```bash
 kubectl apply -f rbac-deploy.yaml
-```
-Verificar que el deployment está corriendo:
-
-```Bash
 kubectl get deployment -n kube-system
 kubectl get pods -n kube-system
 ```
 
-<img width="1122" height="500" alt="image" src="https://github.com/user-attachments/assets/6c1ebfd6-8bee-4f8c-ab7b-3aa7f83288ee" />
+8. Etiquetar nodos como producción (env=prod) para que el scheduler los considere:
 
-Vemos que `my-scheduler` está en `running`.
+```bash
+kubectl label node sched-lab-control-plane env=prod
+kubectl label node sched-lab-worker env=prod
+```
 
-7. Aplicar pods de prueba
+9. Aplicar pods de prueba:
 
-```Bash
+```bash
 kubectl apply -f test-pod.yaml -n test-scheduler        # Pod prod
 kubectl apply -f test-nginx-pod.yaml -n test-scheduler  # Pod prod
 kubectl apply -f test-dev-pod.yaml -n test-scheduler    # Pod dev (sin prod)
 ```
 
-8. Ver estado de los pods
+10. Ver estado de los pods:
 
-```Bash
+```bash
 kubectl get pods -n test-scheduler -o wide
 ```
 
-9. Revisar eventos del namespace
-```Bash 
+11. Revisar eventos del namespace:
+
+```bash
 kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
-```
-
-<img width="1119" height="623" alt="image" src="https://github.com/user-attachments/assets/59feec14-7485-4fd6-8e36-7e25208b8019" />
-
-vemnos:
-Interpretación esperada:
-
-test-pod y test-nginx-pod → Running en nodo con env=prod
-
-test-dev-pod → No programado (Pending) por scheduler custom; reasignado al scheduler default y luego Running.
-
-
-
-
-Notar que si en vez de fiultar `pods` quisieramos filtrar `nodos` pondriamos en el python:
-
-```Python
-nodes = [n for n in api.list_node().items if is_node_compatible(n, pod)]
-```
-y se invocarian los nodos con la variable entorno 
-
-```Bash
-kubectl label node sched-lab-control-plane env=prod
-kubectl label node sched-lab-worker env=prod
 ```
 
 --123--

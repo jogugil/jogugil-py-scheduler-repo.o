@@ -1939,7 +1939,9 @@ Para entender mejor por qué usamos un mecanismo de **backoff exponencial con ji
   https://en.wikipedia.org/wiki/Thundering_herd_problem
 
 
-Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos usado esta estrategia. Por ejemplo:
+#### Implementación en los scripts de prueba
+
+Aunque se nos pide que se implemente dentro del código scheduler.py. Durante la implementación de los bechmarking también hemos usado un backoff simple con sleep entre intentos:
 
 - **En la creación de pods**:
 
@@ -1987,42 +1989,99 @@ create_kind_cluster() {
     return 1
 }
 ```
---123-- Faltaria implementar en el scheduler.py
-
+ 
 ### 4. Spread policy Distribute similar Pods evenly across Nodes.
 
-Del mismo modo, implementamos una política de distribución mediante round-robin en nuestro script. Se pùed ver en 
-la función ***load_pods_from_yaml*** del script **bechmarking_2/start.sh**:
+En este caso nos piden que se distribuya los pods en los diferntes nodos de forma equitativa intentando mejorar la disponibilidad y tolerancia a fallos. Nosotros ya teneos una distribución sencilla mediante el label `app=my-scheduler`. Lo que intenta mantener una asignación equilibrada entre los nodos disponibles, en lugar de concentrarlos todos en el mismo nodo.
+
+```python
+def choose_node(api, pod):
+    nodes = [n for n in api.list_node().items if is_node_compatible(n, pod)]
+    if not nodes:
+        return None  # No hay nodos compatibles → pod rechazado
+
+    pods = api.list_pod_for_all_namespaces().items
+    node_load = {n.metadata.name: 0 for n in nodes}
+
+    pod_app_label = pod.metadata.labels.get("app") if pod.metadata.labels else None
+    for p in pods:
+        if p.spec.node_name in node_load:
+            if not pod_app_label or (p.metadata.labels and p.metadata.labels.get("app") == pod_ap
+p_label):
+                node_load[p.spec.node_name] += 1
+
+    node = min(node_load, key=node_load.get)
+    print(f"[policy] Nodo elegido para {pod.metadata.name}: {node}")
+    return node
+```
+
+En desarrollos profesionales y robustos, el concepto de `spread policy` se relaciona directamente con la **topología de los nodos**, es decir, cómo se organizan los nodos en distintas zonas, racks o regiones dentro del cluster. La idea es distribuir los pods de manera equilibrada **teniendo en cuenta tanto el número de pods por nodo como atributos topológicos** como `zone`, `rack` o `region`, para mejorar la disponibilidad y tolerancia a fallos ante caídas parciales de la infraestructura. Kubernetes proporciona para ello los **Topology Spread Constraints**, que permiten definir reglas declarativas de distribución de pods sobre diferentes topologías, asegurando que pods similares no se concentren en un solo nodo o zona. Referencias útiles: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/ | https://dev.to/farshad_nick/understanding-pod-topology-spread-constraints-in-kubernetes-5e8e
+
+
+#### Implementación en los scripts de pruebas
+
+Del mismo modo, implementamos una política de distribución mediante round-robin en nuestro script. Se puede ver en la función ***load_pods_from_yaml*** del script **bechmarking_2/start.sh**:
 
 ```bash
-create_pods_from_yaml() {
-    local dirs_array=("cpu-heavy" "ram-heavy" "nginx" "test-basic")
-    
-    # Distribuimos uniformemente entre diferentes tipos de pods
-    load_pods_from_yaml dirs_array "$total_pods" "$mode" "$parallel"
-}
-
-load_pods_from_yaml() {
+ load_pods_from_yaml() {
     local -n DIRS=$1
     local total_pods=$2
+    local mode=${3:-s}
+    local parallel=${4:-1}
+
+    local counter=0 batch pod_yaml
+
+    echo "Creando $total_pods pods desde YAML ($mode, $parallel en paralelo)..."
 
     while [[ $counter -lt $total_pods ]]; do
+        batch=$(( total_pods - counter < parallel ? total_pods - counter : parallel ))
+
         for ((i=1;i<=batch;i++)); do
-            # ← Nuestra política de spread: round-robin entre tipos
             dir_index=$(( (counter + i - 1) % ${#DIRS[@]} ))
             pod_yaml="${DIRS[$dir_index]}/${DIRS[$dir_index]}-pod.yaml"
+
+            if [[ ! -f "$pod_yaml" ]]; then
+                warn "Archivo $pod_yaml no existe, se omite"
+                continue
+            fi
+            pids=()
+            if grep -q 'generateName:' "$pod_yaml"; then
+                info "Creando pod desde $pod_yaml con generateName..."
+                if [[ "$mode" == "p" ]]; then
+                    kubectl create -f "$pod_yaml" &
+                    pids+=($!)
+                else
+                    kubectl create -f "$pod_yaml"
+                fi
+            else
+                info "Creando pod desde $pod_yaml con nombre fijo..."
+                if [[ "$mode" == "p" ]]; then
+                    kubectl apply -f "$pod_yaml" &
+                    pids+=($!)
+                else
+                    kubectl apply -f "$pod_yaml"
+                fi
+            fi
         done
+
+        [[ "$mode" == "p" ]] && wait "${pids[@]}"
         counter=$((counter + batch))
     done
+
+    echo "Todos los pods creados desde YAML."
 }
 ```
-Pero lo suyo e ideal es implementarlo en el scheduler.py, auqnue con este script ayudaría también a la redistribución 
-de la carga. 
+
 
 ### ✅ **Checkpoint 5:**
 ***Demonstrate your extended policy via pod logs and placement.***
 
-Ver logs de los scripts **benchmarking_2/start.sh** --123--
+En los apartadoas anteriores se mmuestran diferntes capturas de pantalla donde se muestra la funcionalidad pedida ee implementada dentro del scheduler personalizado tipo watch.
+
+- [Uso de labels](# 1. Label-based)
+- [Uso taints/tolerations](# 2. Taints and tolerations)
+- [Backoff / Retry Use exponential backoff](# 3. Backoff / Retry Use exponential)
+- [Uso Spread policy](# 4. Spread policy)
 
 # 🧠Reflection Discussion
 

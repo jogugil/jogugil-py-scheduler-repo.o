@@ -2079,10 +2079,10 @@ Del mismo modo, implementamos una política de distribución mediante round-robi
 
 En los apartadoas anteriores se mmuestran diferntes capturas de pantalla donde se muestra la funcionalidad pedida ee implementada dentro del scheduler personalizado tipo watch.
 
-- [Uso de labels](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-labels)
-- [Uso taints/tolerations](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-taints)
-- [Backoff / Retry Use exponential backoff](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-retry)
-- [Uso Spread policy](#https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-sprend)
+- [Uso de labels](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#Label-based-node-filtering)
+- [Uso taints/tolerations](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#Taints-and-tolerations)
+- [Backoff / Retry Use exponential backoff](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#Retry-Use-exponential)
+- [Uso Spread policy](#https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#Spread-policy-Distribute)
 
 # 🧠Reflection Discussion
 

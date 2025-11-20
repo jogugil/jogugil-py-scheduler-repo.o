@@ -1466,7 +1466,7 @@ Para poder hacer una comparación más exhaustiva **se han creado unos scripts p
 ## 🧩 Step 8 — Policy Extensions
 
 ### 1. Label-based node filtering
-#uso-labels
+
 Para que los pods solo se ejecuten en nodos de producción, el scheduler personalizado usa la función `is_node_compatible(node, pod)`, que evalúa si un nodo puede recibir un pod según estas reglas:
 
 - Filtro por label `env=prod` en el nodo: solo los nodos que tengan `env=prod` se consideran compatibles. Esto evita que los pods se programen en nodos de desarrollo o test.
@@ -1691,7 +1691,7 @@ pods=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[
 ```
 
 ### 2. Taints and tolerations Use `node.spec.taints` and `pod.spec.tolerations` to filter nodes before scoring.
-#uso-taints
+
 En nuestro script implementamos taints y tolerations principalmente para el scheduler personalizado. Como sabemos, los 
 control-planes de Kubernetes tienen taints por defecto que evitan que pods normales se ejecuten en ellos, pero nuestro 
 custom scheduler necesita estar en el control-plane para acceder a los recursos del cluster. Para ello, El archivo 
@@ -1859,7 +1859,7 @@ Cómo hemos etiquetado todos los nodos con el label `env=prod`, se le puede asig
 En esta ocasión vemos cómo los dos pods sin tolerations se asignan al nodo `sched-lab-worker` y el pod con tolerations al nodo `sched-lab-worker3`. Eto es así, porque esta vez el nodo `sched-lab-worker`no tiene el label `env=prod`. Y el nodo `sched-lab-worker3` tiene tanto el label como el taint que impide que los pods sin tolerations puedan ser asignados a este nodo.
 
 ### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
-#uso-retry
+
 En la actulidad nuestra función de bind utiliza una estrategia lineal de reintentos. En concreto, esperamos siempre un delay de 2 segundos, por defecto, entre reintentos:  `time.sleep(delay)` 
 
 ```python
@@ -1991,7 +1991,6 @@ create_kind_cluster() {
 ```
  
 ### 4. Spread policy Distribute similar Pods evenly across Nodes.
-#uso-sprend
 
 En este caso nos piden que se distribuya los pods en los diferntes nodos de forma equitativa intentando mejorar la disponibilidad y tolerancia a fallos. Nosotros ya teneos una distribución sencilla mediante el label `app=my-scheduler`. Lo que intenta mantener una asignación equilibrada entre los nodos disponibles, en lugar de concentrarlos todos en el mismo nodo.
 

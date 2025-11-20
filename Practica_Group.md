@@ -1991,6 +1991,7 @@ create_kind_cluster() {
 ```
  
 ### 4. Spread policy Distribute similar Pods evenly across Nodes.
+#uso-sprend
 
 En este caso nos piden que se distribuya los pods en los diferntes nodos de forma equitativa intentando mejorar la disponibilidad y tolerancia a fallos. Nosotros ya teneos una distribución sencilla mediante el label `app=my-scheduler`. Lo que intenta mantener una asignación equilibrada entre los nodos disponibles, en lugar de concentrarlos todos en el mismo nodo.
 
@@ -2078,10 +2079,10 @@ Del mismo modo, implementamos una política de distribución mediante round-robi
 
 En los apartadoas anteriores se mmuestran diferntes capturas de pantalla donde se muestra la funcionalidad pedida ee implementada dentro del scheduler personalizado tipo watch.
 
-- [Uso de labels](·uso-labels)
-- [Uso taints/tolerations](#uso-taints)
-- [Backoff / Retry Use exponential backoff](#uso-retry)
-- [Uso Spread policy](# 4. Spread policy)
+- [Uso de labels](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-labels)
+- [Uso taints/tolerations](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-taints)
+- [Backoff / Retry Use exponential backoff](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-retry)
+- [Uso Spread policy](#https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#uso-sprend)
 
 # 🧠Reflection Discussion
 

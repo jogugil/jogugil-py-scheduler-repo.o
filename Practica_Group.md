@@ -1761,6 +1761,28 @@ nodes:
   - role: worker
 ```
 
+Además, creamos un pod nuevo (`test-worker3-pod`) con un tolerations para el taint del `worker3`.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-worker3-pod
+  namespace: test-scheduler
+spec:
+  schedulerName: my-scheduler
+  tolerations:
+  - key: "example"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  containers:
+  - name: test-container
+    image: busybox
+    command: ["sleep", "3600"]
+  restartPolicy: Never
+```
+
 2. Borrar el cluster actual y crear uno nuevo usando este manifiesto:
 
 ```bash

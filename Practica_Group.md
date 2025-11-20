@@ -1860,8 +1860,70 @@ En esta ocasión vemos cómo los dos pods sin tolerations se asignan al nodo `sc
 
 ### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.
 
-Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos
-usado esta estrategia. Por ejemplo:
+En la actulidad nuestra función de bind utiliza una estrategia lineal de reintentos. En concreto, esperamos siempre un delay de 2 segundos, por defecto, entre reintentos:  `time.sleep(delay)` 
+
+```python
+def bind_pod(api, pod, node_name: str, retries=3, delay=2):
+    for attempt in range(1, retries + 1):
+        print(f"[scheduler] Intentando bind (intento {attempt}): {pod.metadata.namespace}/{pod.me
+tadata.name} -> {node_name}")
+        try:
+            target = client.V1ObjectReference(kind="Node", name=node_name)
+            meta = client.V1ObjectMeta(name=pod.metadata.name)
+            body = client.V1Binding(target=target, metadata=meta)
+            api.create_namespaced_binding(pod.metadata.namespace, body, _preload_content=False)
+            print(f"[scheduler] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}
+")
+            return True
+        except client.rest.ApiException as e:
+            print(f"[scheduler] Failed binding pod {pod.metadata.name}: {e}")
+            time.sleep(delay)
+    print(f"[error] No se pudo bindear {pod.metadata.name} después de {retries} intentos")
+    return False
+```
+
+Nos piden que la estretegia sea `exponencial backoff`, lo que implica que cada intento espera más que el anterior, generalmente multiplicando por 2:
+
+1er intento → espera 1 s
+2º intento → espera 2 s
+3º intento → espera 4 s
+4º intento → espera 8 s
+
+Para conseguirlo creamos una función que nos proporciona ese proceso y la integramos dentro de nuestra función `bind_pod`:
+
+
+```python
+def exponential_backoff(attempt, base_delay=1):
+    expo = base_delay * (2 ** (attempt - 1))
+    jitter = random.uniform(0, expo * 0.1)
+    sleep_time = expo + jitter
+    print(f"[retry] Esperando {sleep_time:.2f}s antes del retry…")
+    return sleep_time
+
+def bind_pod(api, pod, node_name: str, retries=3, delay=2):
+    for attempt in range(1, retries + 1):
+        print(f"[scheduler] Intentando bind (intento {attempt}): {pod.metadata.namespace}/{pod.me
+tadata.name} -> {node_name}")
+        try:
+            target = client.V1ObjectReference(kind="Node", name=node_name)
+            meta = client.V1ObjectMeta(name=pod.metadata.name)
+            body = client.V1Binding(target=target, metadata=meta)
+            api.create_namespaced_binding(pod.metadata.namespace, body, _preload_content=False)
+            print(f"[scheduler] Bound {pod.metadata.namespace}/{pod.metadata.name} -> {node_name}
+")
+            return True
+        except client.rest.ApiException as e:
+            print(f"[scheduler] Failed binding pod {pod.metadata.name}: {e}")
+            sleep_delay = exponential_backoff(attempt, base_delay=2)
+              
+            time.sleep(sleep_delay)
+    print(f"[error] No se pudo bindear {pod.metadata.name} después de {retries} intentos")
+    return False
+```
+Notar que añadimos una distribución para evitar que todos los pods reintenten en el mismo instante, lo que previene el llamado `thundering herd`, donde múltiples pods provocarían una sobrecarga simultánea sobre el API Server. Para conseguirlo creamos una función dedicada al cálculo de ese retardo y la integramos en la función bind_pod para que cada intento utilice un tiempo de espera distinto y progresivo.
+
+
+Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos usado esta estrategia. Por ejemplo:
 
 - **En la creación de pods**:
 

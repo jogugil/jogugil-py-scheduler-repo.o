@@ -1471,8 +1471,6 @@ Para que los pods solo se ejecuten en nodos de producción, el scheduler persona
 
 - Filtro por label `env=prod` en el nodo: solo los nodos que tengan `env=prod` se consideran compatibles. Esto evita que los pods se programen en nodos de desarrollo o test.
 
-- Compatibilidad con taints/tolerations: si el pod no tiene tolerations se considera compatible; si las tiene, cada taint del nodo se comprueba y un taint no tolerado hace que el nodo se considere incompatible.
-
 ```python
 def is_node_compatible(node, pod):
 
@@ -1481,16 +1479,6 @@ def is_node_compatible(node, pod):
     if node_env != "prod":
         return False
 
-    if not pod.spec.tolerations:
-        return True
-    node_taints = node.spec.taints or []
-    for taint in node_taints:
-        tolerated = any(
-            t.key == taint.key and t.effect == taint.effect and (t.value == taint.value if t.value else True)
-            for t in pod.spec.tolerations
-        )
-        if not tolerated:
-            return False
     return True
 ```
 

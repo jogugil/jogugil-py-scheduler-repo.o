@@ -2079,10 +2079,11 @@ Del mismo modo, implementamos una política de distribución mediante round-robi
 
 En los apartadoas anteriores se mmuestran diferntes capturas de pantalla donde se muestra la funcionalidad pedida ee implementada dentro del scheduler personalizado tipo watch.
 
-- [Label-based node filtering](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md##1-label-based-node-filtering)
+- [Label-based node filtering](https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#1-label-based-node-filtering)
 - [Taints and tolerations](#2-taints-and-tolerations-use-nodespectaints-and-podspectolerations-to-filter-nodes-before-scoring)
 - [Backoff / Retry](#3-backoff--retry-use-exponential-backoff-when-binding-fails-due-to-transient-api-errors)
-- [Uso Spread policy](#https://github.com/jogugil/jogugil-py-scheduler-repo.o/blob/main/Practica_Group.md#Spread-policy-Distribute)
+- [Spread policy](#spread-policy-distribute-similar-pods-evenly-across-nodes)
+
 
 # 🧠Reflection Discussion
 

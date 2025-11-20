@@ -1885,8 +1885,11 @@ tadata.name} -> {node_name}")
 Nos piden que la estretegia sea `exponencial backoff`, lo que implica que cada intento espera más que el anterior, generalmente multiplicando por 2:
 
 1er intento → espera 1 s
+
 2º intento → espera 2 s
+
 3º intento → espera 4 s
+
 4º intento → espera 8 s
 
 Para conseguirlo creamos una función que nos proporciona ese proceso y la integramos dentro de nuestra función `bind_pod`:
@@ -1921,6 +1924,19 @@ tadata.name} -> {node_name}")
     return False
 ```
 Notar que añadimos una distribución para evitar que todos los pods reintenten en el mismo instante, lo que previene el llamado `thundering herd`, donde múltiples pods provocarían una sobrecarga simultánea sobre el API Server. Para conseguirlo creamos una función dedicada al cálculo de ese retardo y la integramos en la función bind_pod para que cada intento utilice un tiempo de espera distinto y progresivo.
+
+### Referencias sobre backoff exponencial y jitter
+
+Para entender mejor por qué usamos un mecanismo de **backoff exponencial con jitter** en nuestro scheduler, puedes consultar estas lecturas recomendadas:
+
+- *Understanding Jitter Backoff – A Beginner’s Guide* — explica de forma muy clara qué es el **jitter**, cómo se combina con el backoff exponencial y por qué es útil para evitar que muchos reintentos coincidan exactamente.  
+  https://dev.to/biomousavi/understanding-jitter-backoff-a-beginners-guide-2gc  
+
+- *CrashLoopBackOff* en Kubernetes — describe cómo Kubernetes utiliza backoff exponencial para gestionar reinicios fallidos de pods, evitando la saturación de recursos mediante esperas progresivas.  
+  https://www.perfectscale.io/blog/kubernetes-errors#:~:text=CrashLoopBackOff%20means%20that%20a%20Kubernetes,max%2C%20to%20reduce%20resource%20thrashing.
+
+- *Thundering herd problem* — artículo de Wikipedia que explica cómo una gran cantidad de procesos puede reintentar al mismo tiempo y saturar un recurso compartido, motivo por el cual usamos jitter para dispersar los reintentos.  
+  https://en.wikipedia.org/wiki/Thundering_herd_problem
 
 
 Aunque s enos pide que se implemente dentro del código scheduler.py. Durante la implementación de lso bechmarking también hemos usado esta estrategia. Por ejemplo:

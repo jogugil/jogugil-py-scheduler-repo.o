@@ -1621,6 +1621,7 @@ kind load docker-image my-py-scheduler:latest --name sched-lab --nodes sched-lab
 docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
 ```
 <img width="1225" height="536" alt="image" src="https://github.com/user-attachments/assets/04c16665-547e-4820-b880-a22709818f77" />
+
 Comprobamos que la imagen de mi `my-py-scheduler`está en el `control plane` cargada.
 
 7. Crear namespace para pruebas:

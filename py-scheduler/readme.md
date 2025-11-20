@@ -4,5 +4,7 @@ y los pods de prueba para calcular las métricas sobre la ejecución de la logic
 
 No es necesario lanzas el script `scheduler-test.sh`, utilizando `Makefile` y pasandole el atributo que indique la peración que deseas realizar ya se puede comprobar cómo se carga y despliega el `scheduler personalizado` y los cambios de estado del pod añadido al clúster.
 
-En el subdirectorioi `img`están algunas capturas de pantalla de los comandoskubernetes ejecutados en el clúster creado.
+NOTA:
+
+En este directorio se mantiene la versión de `my-scheduler` tipo `watch` con las funcionalidades del paso 8. Por ello deben mantenerse todos los manifiestos que contienen las modificaciones necesarias para su funciona,miento correcto. 
 

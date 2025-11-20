@@ -1855,6 +1855,7 @@ kubectl get events -n test-scheduler --sort-by='.metadata.creationTimestamp'
 Cómo hemos etiquetado todos los nodos con el label `env=prod`, se le puede asignar un pod a cualqueir nodo. Pero vemos que el pod `test-worker3-pod`, que es el quien tiene el tolerations del `worker3`, se asigna sólo al `worker3`.
 
 <img width="875" height="801" alt="image" src="https://github.com/user-attachments/assets/6034b386-4bcd-4e46-b2bb-5afbd7950736" />
+
 En esta ocasión vemos cómo los dos pods sin tolerations se asignan al nodo `sched-lab-worker` y el pod con tolerations al nodo `sched-lab-worker3`. Eto es así, porque esta vez el nodo `sched-lab-worker`no tiene el label `env=prod`. Y el nodo `sched-lab-worker3` tiene tanto el label como el taint que impide que los pods sin tolerations puedan ser asignados a este nodo.
 
 ### 3. Backoff / Retry Use exponential backoff when binding fails due to transient API errors.

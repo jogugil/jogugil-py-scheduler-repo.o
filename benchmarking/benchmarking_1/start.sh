@@ -379,9 +379,10 @@ management_menu() {
         echo "14. Limpiar cluster completo"
         echo "15. Crear pods de prueba y scheduler"
         echo "16. Recrear el cluster completo" 
-        echo "17. Salir"
+        echo "17. Validar cluster" 
+        echo "18. Salir"
 
-        read -p "Selecciona una opción (0-17): " option
+        read -p "Selecciona una opción (0-18): " option
 
         case $option in
             0)
@@ -440,6 +441,10 @@ management_menu() {
                 recreate_kind_cluster_default
                 ;;
             17)
+                echo "=== VERIFICAR CONFIGURACIÓN DE NODOS ==="
+                configure_node_labels_and_taints "$CLUSTER_NAME"
+                ;;
+            18)
                 return 0
                 ;;
             *)
@@ -1010,6 +1015,9 @@ recreate_kind_cluster_default() {
 
     echo "Cluster recreado." >&2
 
+    # CONFIGURAR ETIQUETAS Y TAINTS DESPUÉS DE CREAR EL CLUSTER
+    configure_node_labels_and_taints "$CLUSTER_NAME"
+
     # Crear namespace y lanzar scheduler automáticamente
     kubectl create ns "$NAMESPACE"
     create_scheduler_custom
@@ -1040,7 +1048,7 @@ recreate_kind_cluster_default() {
 
 # Con limitacione
 # Lo intenté , pero en mi PC me da problemas de memoria
-recreate_kind_cluster_with_limitsrecreate_kind_cluster_limit() {
+recreate_kind_cluster_with_limits() {
     # Pedir datos al usuario con valores por defecto
     read -p "Nombre del cluster [sched-lab]: " CLUSTER_NAME
     CLUSTER_NAME=${CLUSTER_NAME:-sched-lab}
@@ -1098,6 +1106,9 @@ recreate_kind_cluster_with_limitsrecreate_kind_cluster_limit() {
         echo "ERROR: No se pudo recrear el clúster '$CLUSTER_NAME'.">&2
         return 1
     fi
+
+    # CONFIGURAR ETIQUETAS Y TAINTS DESPUÉS DE CREAR EL CLUSTER
+    configure_node_labels_and_taints "$CLUSTER_NAME"
 
     limit_worker_resources "$CLUSTER_NAME" "$cpu" "$mem"
 
@@ -1340,7 +1351,6 @@ create_namespace() {
         info "Namespace $NAMESPACE ya existe"
     fi
 }
-
 create_scheduler_custom() {
     local scheduler_ns="kube-system"
     local cluster_name="sched-lab"
@@ -1354,13 +1364,12 @@ create_scheduler_custom() {
     info "Cargando la imagen solo en el nodo control-plane ($node_cp)"
     kind load docker-image my-py-scheduler:latest --name "$cluster_name" --nodes "$node_cp"
 
-    #comprobamos que la imagen está en el control plane
-    docker exec -it sched-lab-control-plane crictl images | grep my-py-scheduler
+    # Comprobamos que la imagen está en el control plane
+    docker exec -it "$node_cp" crictl images | grep my-py-scheduler || warn "Imagen no encontrada en control plane"
 
     info "Aplicando scheduler personalizado en namespace '$scheduler_ns'"
 
     sleep 2
-
 
     # Validar YAML primero (opcional)
     if ! kubectl apply --dry-run=client -f rbac-deploy.yaml -n "$scheduler_ns" >/dev/null 2>&1; then
@@ -1397,7 +1406,11 @@ create_scheduler_custom() {
             break
         fi
     done
+    
+    # Verificar configuración después de que esté running
+    verify_scheduler_configuration
 }
+
 cleanup_old_pods() {
     info "Limpiando pods anteriores en namespace $NAMESPACE"
     kubectl delete pods --all -n "$NAMESPACE" --ignore-not-found=true --grace-period=0 --force 2>/dev/null || true
@@ -1706,6 +1719,89 @@ delete_cluster_if_exists() {
         echo "[INFO] No se encontró el cluster '$cluster_name'. Continuando..."
     fi
 }
+configure_node_labels_and_taints() {
+    local cluster_name="$1"
+    info "Configurando etiquetas y taints en los nodos del cluster '$cluster_name'"
+    
+    # Obtener lista de nodos
+    local nodes
+    nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+    
+    if [[ -z "$nodes" ]]; then
+        error "No se pudieron obtener los nodos del cluster"
+        return 1
+    fi
+    
+    info "Nodos encontrados: $nodes"
+    
+    # Aplicar etiqueta env=prod a todos los nodos
+    for node in $nodes; do
+        info "Aplicando etiqueta env=prod al nodo: $node"
+        kubectl label node "$node" env=prod --overwrite
+    done
+    
+    # Buscar el worker3 específicamente para aplicar el taint
+    local worker3_node=""
+    for node in $nodes; do
+        if [[ "$node" == *"worker3"* ]] || [[ "$node" == *"worker-3"* ]]; then
+            worker3_node="$node"
+            break
+        fi
+    done
+    
+    # Si no encontramos worker3, buscar el último worker
+    if [[ -z "$worker3_node" ]]; then
+        local worker_nodes=()
+        for node in $nodes; do
+            if [[ "$node" == *"worker"* ]] && [[ "$node" != *"control-plane"* ]]; then
+                worker_nodes+=("$node")
+            fi
+        done
+        
+        if [[ ${#worker_nodes[@]} -ge 3 ]]; then
+            worker3_node="${worker_nodes[2]}"
+        elif [[ ${#worker_nodes[@]} -gt 0 ]]; then
+            # Si hay menos de 3 workers, usar el último worker
+            worker3_node="${worker_nodes[-1]}"
+        fi
+    fi
+    
+    # Aplicar taint al worker3 si se encontró
+    if [[ -n "$worker3_node" ]]; then
+        info "Aplicando taint al nodo: $worker3_node"
+        kubectl taint nodes "$worker3_node" example=true:NoSchedule --overwrite
+    else
+        warn "No se pudo encontrar un nodo worker3 para aplicar el taint"
+    fi
+    
+    # Mostrar estado final
+    info "=== ESTADO FINAL DE NODOS ==="
+    kubectl get nodes -o custom-columns="NAME:.metadata.name,ENV:.metadata.labels.env,TAINTS:.spec.taints" 2>/dev/null || \
+    kubectl get nodes -o wide
+    
+    return 0
+}
+verify_scheduler_configuration() {
+    info "Verificando configuración del scheduler personalizado"
+    
+    # Verificar que el scheduler esté ejecutándose
+    local scheduler_pod
+    scheduler_pod=$(kubectl get pods -n kube-system -l app=my-scheduler -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    
+    if [[ -z "$scheduler_pod" ]]; then
+        error "No se encontró el pod del scheduler personalizado"
+        return 1
+    fi
+    
+    info "Scheduler pod: $scheduler_pod"
+    
+    # Verificar logs del scheduler para ver si está funcionando correctamente
+    info "Verificando logs del scheduler..."
+    kubectl logs -n kube-system "$scheduler_pod" --tail=10 | grep -i "filter\|score\|node" || true
+    
+    return 0
+}
+
 # ========================================
 # FUNCIONES DE INTERFAZ DE USUARIO
 # ========================================
@@ -1839,6 +1935,10 @@ main() {
     delete_cluster_if_exists "$CLUSTER_NAME"
     check_dependencies
     create_cluster
+
+    # CONFIGURAR ETIQUETAS Y TAINTS ANTES DE CREAR EL SCHEDULER
+    configure_node_labels_and_taints "$CLUSTER_NAME"
+    
     create_namespace
     cleanup_old_pods
     create_scheduler_custom

@@ -1,8 +1,6 @@
 ## Autores
 
 - **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Colaborador  
-- **Javier Díaz León** ([JavierDiazL - javidi2001@gmail.com]) – Colaborador  
-- **Francesc** ([cescdovi@gmail.com]) – Colaborador  
 
 ## Licencias
 
@@ -19,16 +17,7 @@ Este script permite crear y gestionar pods de prueba en Kubernetes, controlar la
 
 En este directorio se tienen dos scripts para recrear dos pequeños benchmarking:
 
-* ***benchmarking_1/*** : Script algo más complejo, más verbose y con el cálculo de diversas mñetricas ademñas del consumo de cpu y memoria que me da el servidor de métricas 
-instaldo en el clúster. 
-Además, mantiene un control de logger y de fichero de métricas en json. 
-```Bash
-./run_benchmarking.sh <número de pods en paralelo> <número de pods totales>
-```
-Seejecutan a la vez diferntes scripts (logger.sh, benchmarking_setaup.sh). Y mantenemos un script de ejecución de pods y cálculo de métricas (scheduler-test.sh)
-
-
-* ***benchmarking_2/***: Script más simple donde ademñas aparece un menu para poder visualizar los logs y eventos tanto de los pods creados cómo del scheduler personalizado. 
+* ***benchmarking_1/*** : Script más simple donde ademñas aparece un menu para poder visualizar los logs y eventos tanto de los pods creados cómo del scheduler personalizado. 
 se ejecuta con :
 ```Bash
 ./start.sh <número de pods en paralelo> <número de pods totales>
@@ -223,11 +212,6 @@ Además, seguimos limitando el número de workers y pods mediante las variables 
   "startedAt": "2025-11-16T11:43:39Z"
 }
 ```
-
-AÜN EN DESARROLLO Y PRUEBAS!!!!
-
-
-
 
 # Glosario de Comandos Kubernetes para el Proyecto
 Este glosario proporciona una referencia rápida para todas las operaciones de monitoreo y troubleshooting necesarias en el proyecto de Kubernetes.

@@ -4,6 +4,31 @@ metadata:
   name: my-scheduler
   namespace: kube-system
 ---
+# SOLO el permiso adicional para eventos
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: my-scheduler-events
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+# Binding adicional solo para eventos
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: my-scheduler-events-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: my-scheduler-events
+subjects:
+- kind: ServiceAccount
+  name: my-scheduler
+  namespace: kube-system
+---
+# MANTENER el binding original al rol del sistema (IMPORTANTE)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -11,7 +36,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:kube-scheduler
+  name: system:kube-scheduler  # ← Este es crítico
 subjects:
 - kind: ServiceAccount
   name: my-scheduler

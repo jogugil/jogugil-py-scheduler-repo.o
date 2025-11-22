@@ -1,0 +1,4 @@
+timestamp,test_name,pod_name,scheduling_latency,processing_latency,total_latency,pending_running_latency,pull_start_latency,cpu_usage,mem_usage,list_ops,success_rate,composite_load,cluster_state
+2025-11-22T11:42:21Z,test_basic_detailed,test-pod,N/A,N/A,N/A,0,4,4m,59Mi,34,15.38,N/A,4/4
+2025-11-22T11:43:13Z,test_nginx_detailed,test-nginx-pod,N/A,N/A,N/A,0,6,6m,59Mi,34,14.29,N/A,4/4
+2025-11-22T11:44:25Z,test-worker3-pod_detailed,test-worker3-pod,N/A,N/A,N/A,0,6,6m,59Mi,34,13.33,N/A,4/4

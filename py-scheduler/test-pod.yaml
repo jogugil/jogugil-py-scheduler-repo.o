@@ -8,5 +8,7 @@ metadata:
 spec:
   schedulerName: my-scheduler
   containers:
-  - name: pause
-    image: registry.k8s.io/pause:3.9
+  - name: test-container
+    image: busybox
+    command: ["sleep", "3600"]
+  restartPolicy: Never

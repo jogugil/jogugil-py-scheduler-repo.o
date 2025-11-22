@@ -12,10 +12,3 @@ spec:
   - name: cpu-heavy
     image: cpu-heavy:latest
     imagePullPolicy: Never
-    resources:
-      requests:
-        memory: "128Mi"
-        cpu: "0.1"
-      limits:
-        memory: "256Mi"
-        cpu: "0.25"

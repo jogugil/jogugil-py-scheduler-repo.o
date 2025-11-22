@@ -12,3 +12,10 @@ spec:
   - name: ram-heavy
     image: ram-heavy:latest
     imagePullPolicy: Never
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "0.2"
+      limits:
+        memory: "512Mi"
+        cpu: "0.5"

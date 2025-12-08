@@ -1,0 +1,11 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements2.txt .
+RUN pip install --no-cache-dir -r requirements2.txt
+COPY . .
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["python","/app/scheduler2.py"]
+
+
+
+

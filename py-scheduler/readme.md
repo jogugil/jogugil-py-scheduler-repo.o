@@ -4,13 +4,13 @@ y los pods de prueba para calcular las métricas sobre la ejecución de la logic
 
 No es necesario lanzas el script `scheduler-test.sh`, utilizando `Makefile` y pasandole el atributo que indique la peración que deseas realizar ya se puede comprobar cómo se carga y despliega el `scheduler personalizado` y los cambios de estado del pod añadido al clúster.
 
-<<<<<<< HEAD
+ 
 NOTA:
 
 En este directorio se mantiene la versión de `my-scheduler` tipo `watch` con las funcionalidades del paso 8. Por ello deben mantenerse todos los manifiestos que contienen las modificaciones necesarias para su funciona,miento correcto. 
 =======
 Los ficheros que debe tenerse en este directoprio `py-scheduler` son:
->>>>>>> 092f599 (modificacion métricas y scripts de métricas)
+ 
 
 - **Dockerfile**: Para crear la imagen en local `my-py-scheduler`
 - **components.yaml**: Para el despliegue del servidor de métricas kubernetes

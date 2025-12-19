@@ -2,7 +2,7 @@
 ## Autores
 
 - **José Javier Gutiérrez Gil** ([jogugil@gmail.com]) – Colaborador
-
+- **José Javier Diaz León** (javidi2001@gmail.com) – Colaborador
 **Nota:** 
 *La resolución de todos los puntos de la práctica se describen en  [Practica_group.md](Practica_Group.md).*
 
